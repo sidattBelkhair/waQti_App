@@ -9,7 +9,7 @@ const { sendOTP, sendResetLink } = require('../utils/sms');
 // POST /api/auth/register
 exports.register = async (req, res) => {
   try {
-    const { nom, email, telephone, motDePasse } = req.body;
+    const { nom, email, telephone, motDePasse, role } = req.body;
 
     const existing = await User.findOne({ $or: [{ email }, { telephone }] });
     if (existing) {
@@ -19,7 +19,10 @@ exports.register = async (req, res) => {
       });
     }
 
-    const user = new User({ nom, email, telephone, motDePasse, role: ROLES.CLIENT });
+    const allowedRoles = [ROLES.CLIENT, ROLES.MANAGER];
+    const userRole = allowedRoles.includes(role) ? role : ROLES.CLIENT;
+
+    const user = new User({ nom, email, telephone, motDePasse, role: userRole });
 
     const otpCode = generateOTP();
     user.otp = {
@@ -278,13 +281,28 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// POST /api/auth/register-etablissement
+// GET /api/auth/my-etablissement
+exports.getMyEtablissement = async (req, res) => {
+  try {
+    const etab = await Etablissement.findOne({ responsable: req.user._id });
+    if (!etab) return res.status(404).json({ success: false, error: 'Aucun etablissement trouve' });
+    res.json({ success: true, etablissement: etab });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// POST /api/auth/register-etablissement (gestionnaire uniquement)
 exports.registerEtablissement = async (req, res) => {
   try {
-    const { nom, type, adresse, telephone, email, documents } = req.body;
+    if (req.user.role !== ROLES.MANAGER) {
+      return res.status(403).json({
+        success: false,
+        error: 'Seuls les gestionnaires peuvent enregistrer un etablissement.',
+      });
+    }
 
-    req.user.role = ROLES.MANAGER;
-    await req.user.save();
+    const { nom, type, adresse, telephone, email, documents } = req.body;
 
     const etablissement = new Etablissement({
       nom,
@@ -294,15 +312,16 @@ exports.registerEtablissement = async (req, res) => {
       email,
       responsable: req.user._id,
       documents: documents || [],
+      statut: 'en_attente',
     });
 
     await etablissement.save();
 
-    console.log('[Admin] Nouvel etablissement en attente: ' + nom);
+    console.log('[Gestionnaire] Nouvel etablissement en attente de validation: ' + nom);
 
     res.status(201).json({
       success: true,
-      message: 'Etablissement enregistre. En attente de validation.',
+      message: 'Etablissement enregistre. En attente de validation par un administrateur.',
       etablissement,
     });
   } catch (error) {

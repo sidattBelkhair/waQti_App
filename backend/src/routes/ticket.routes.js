@@ -4,6 +4,7 @@ const { authenticateToken } = require('../middleware/auth.middleware');
 
 router.use(authenticateToken);
 
+router.get('/mes-tickets', tickets.getMesTickets);
 router.post('/', tickets.createTicket);
 router.post('/rdv', tickets.createTicketRDV);
 router.delete('/:id/annuler', tickets.cancelTicket);

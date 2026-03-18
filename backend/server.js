@@ -35,6 +35,7 @@ app.use('/api/etablissements', require('./src/routes/etablissement.routes'));
 app.use('/api/services', require('./src/routes/etablissement.routes'));
 app.use('/api/tickets', require('./src/routes/ticket.routes'));
 app.use('/api/files', require('./src/routes/file.routes'));
+app.use('/api/admin', require('./src/routes/admin.routes'));
 
 // WebSocket - Files d'attente temps reel
 const fileQueueSocket = require('./src/sockets/fileQueue.socket');

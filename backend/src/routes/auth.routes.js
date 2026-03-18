@@ -13,6 +13,7 @@ router.post('/reset-password', auth.resetPassword);
 
 // Routes protegees
 router.post('/logout', authenticateToken, auth.logout);
+router.get('/my-etablissement', authenticateToken, auth.getMyEtablissement);
 router.get('/profile', authenticateToken, auth.getProfile);
 router.put('/profile', authenticateToken, auth.updateProfile);
 router.post('/change-phone', authenticateToken, auth.changePhone);

@@ -32,6 +32,22 @@ async function recalculerPositions(fileId, io) {
   await file.save();
 }
 
+// GET /api/tickets/mes-tickets
+exports.getMesTickets = async (req, res) => {
+  try {
+    const tickets = await Ticket.find({
+      utilisateur: req.user._id,
+      statut: { $in: ['en_attente', 'en_cours'] },
+    })
+      .populate('etablissement', 'nom type')
+      .populate('service', 'nom')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, tickets });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 // POST /api/tickets
 exports.createTicket = async (req, res) => {
   try {
