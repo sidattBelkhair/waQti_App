@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
+import '../../l10n/app_strings.dart';
 
 class OTPScreen extends StatefulWidget {
   final String userId;
@@ -20,10 +21,6 @@ class _OTPScreenState extends State<OTPScreen> {
   @override
   void initState() {
     super.initState();
-    // Pré-remplir le champ si le code est disponible (mode dev)
-    if (widget.devOtp != null) {
-      _otpCtrl.text = widget.devOtp!;
-    }
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_countdown > 0) {
         setState(() => _countdown--);
@@ -69,97 +66,70 @@ class _OTPScreenState extends State<OTPScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Vérification OTP')),
+      appBar: AppBar(title: Text(context.tr('otp_title'))),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                  color: WaqtiTheme.primaryLight, shape: BoxShape.circle),
-              child: const Icon(Icons.sms_outlined,
-                  size: 40, color: WaqtiTheme.primary),
+              width: 90, height: 90,
+              decoration: BoxDecoration(gradient: WaqtiTheme.primaryGradient, shape: BoxShape.circle),
+              child: const Icon(Icons.sms_outlined, size: 44, color: Colors.white),
             ),
             const SizedBox(height: 24),
-            const Text('Code de vérification',
-                style: TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(context.tr('otp_title'),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text('Un code à 6 chiffres a été envoyé par SMS',
+            Text(context.tr('otp_subtitle'),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: WaqtiTheme.textSecondary)),
-            const SizedBox(height: 8),
-            Text(
-              _timerText,
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: _countdown > 0
-                      ? WaqtiTheme.primary
-                      : WaqtiTheme.danger),
-            ),
-
-            // ── Bandeau dev : code visible ──
-            if (widget.devOtp != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFFFCA28))),
-                child: Row(children: [
-                  const Icon(Icons.bug_report_outlined,
-                      color: Color(0xFFF57F17), size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Mode test — Code : ${widget.devOtp}',
-                      style: const TextStyle(
-                          color: Color(0xFFF57F17),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14),
-                    ),
-                  ),
-                ]),
+                style: const TextStyle(color: WaqtiTheme.textSecondary)),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: _countdown > 60 ? WaqtiTheme.primaryLight : const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(20),
               ),
-            ],
-
-            const SizedBox(height: 24),
+              child: Text(
+                _timerText,
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: _countdown > 60 ? WaqtiTheme.primary : WaqtiTheme.warning),
+              ),
+            ),
+            const SizedBox(height: 32),
             TextField(
               controller: _otpCtrl,
               keyboardType: TextInputType.number,
               maxLength: 6,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 32,
-                  letterSpacing: 16,
-                  fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                  counterText: '', hintText: '000000'),
+              style: const TextStyle(fontSize: 36, letterSpacing: 12, fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(counterText: '', hintText: '——————'),
             ),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: (_loading || _countdown <= 0) ? null : _verify,
-                child: _loading
-                    ? const SizedBox(
-                        width: 20, height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Vérifier',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: WaqtiTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
+                  onPressed: (_loading || _countdown <= 0) ? null : _verify,
+                  child: _loading
+                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text(context.tr('otp_verify')),
+                ),
               ),
             ),
             const SizedBox(height: 16),
             TextButton(
               onPressed: _countdown <= 0 ? _resend : null,
-              child: const Text('Renvoyer le code'),
+              child: Text(context.tr('otp_resend'),
+                  style: TextStyle(color: _countdown <= 0 ? WaqtiTheme.primary : WaqtiTheme.textSecondary)),
             ),
           ],
         ),

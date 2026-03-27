@@ -45,13 +45,13 @@ export default function LoginPage() {
         {step === 'login' ? (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email ou Telephone</label>
-              <input type="text" value={identifier} onChange={(e) => setIdentifier(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="admin@waqti.mr" required />
+              <label htmlFor="tel" className="block text-sm font-medium text-slate-700 mb-1">Numéro de téléphone</label>
+              <input id="tel" type="tel" value={identifier} onChange={(e) => setIdentifier(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="+222XXXXXXXX" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Mot de passe</label>
-              <input type="password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)}
+              <label htmlFor="mdp" className="block text-sm font-medium text-slate-700 mb-1">Mot de passe</label>
+              <input id="mdp" type="password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)}
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="********" required />
             </div>
             <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50">

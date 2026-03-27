@@ -11,24 +11,21 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nomCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
   final _telCtrl = TextEditingController(text: '+222');
   final _mdpCtrl = TextEditingController();
   bool _loading = false;
   String _role = 'client';
 
   Future<void> _register() async {
-    if (_nomCtrl.text.isEmpty || _emailCtrl.text.isEmpty ||
-        _telCtrl.text.length < 8 || _mdpCtrl.text.length < 6) {
+    if (_nomCtrl.text.isEmpty || _telCtrl.text.length < 8 || _mdpCtrl.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Remplissez tous les champs (mot de passe min 6 caracteres)')));
+          content: Text('Remplissez tous les champs (mot de passe min 6 caractères)')));
       return;
     }
     setState(() => _loading = true);
     final auth = context.read<AuthProvider>();
     final (userId, devOtp) = await auth.register(
-        _nomCtrl.text.trim(), _emailCtrl.text.trim(),
-        _telCtrl.text.trim(), _mdpCtrl.text, _role);
+        _nomCtrl.text.trim(), _telCtrl.text.trim(), _mdpCtrl.text, _role);
     setState(() => _loading = false);
 
     if (userId != null && mounted) {
@@ -50,26 +47,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
           TextField(
               controller: _nomCtrl,
               decoration: const InputDecoration(
-                  labelText: 'Nom complet', prefixIcon: Icon(Icons.person_outline))),
-          const SizedBox(height: 16),
-          TextField(
-              controller: _emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                  labelText: 'Email', prefixIcon: Icon(Icons.email_outlined))),
+                  labelText: 'Nom complet', prefixIcon: Icon(Icons.person_outline, color: WaqtiTheme.primary))),
           const SizedBox(height: 16),
           TextField(
               controller: _telCtrl,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
-                  labelText: 'Telephone', prefixIcon: Icon(Icons.phone_outlined))),
+                  labelText: 'Numéro de téléphone',
+                  hintText: '+222XXXXXXXXX',
+                  prefixIcon: Icon(Icons.phone_outlined, color: WaqtiTheme.primary))),
           const SizedBox(height: 16),
           TextField(
               controller: _mdpCtrl,
               obscureText: true,
               decoration: const InputDecoration(
                   labelText: 'Mot de passe (min 6 car.)',
-                  prefixIcon: Icon(Icons.lock_outline))),
+                  prefixIcon: Icon(Icons.lock_outline, color: WaqtiTheme.primary))),
           const SizedBox(height: 24),
 
           // Selecteur de role

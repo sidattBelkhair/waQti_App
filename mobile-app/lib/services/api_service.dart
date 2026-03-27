@@ -50,8 +50,8 @@ class ApiService {
     } catch (_) { return false; }
   }
 
-  Future<Response> register(String nom, String email, String tel, String mdp, String role) =>
-    _dio.post('/auth/register', data: {'nom': nom, 'email': email, 'telephone': tel, 'motDePasse': mdp, 'role': role});
+  Future<Response> register(String nom, String tel, String mdp, String role) =>
+    _dio.post('/auth/register', data: {'nom': nom, 'telephone': tel, 'motDePasse': mdp, 'role': role});
   Future<Response> getMyEtablissement() => _dio.get('/auth/my-etablissement');
   Future<Response> getMesTickets() => _dio.get('/tickets/mes-tickets');
   Future<Response> login(String identifier, String mdp) =>

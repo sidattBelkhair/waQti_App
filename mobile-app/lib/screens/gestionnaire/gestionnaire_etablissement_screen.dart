@@ -134,7 +134,7 @@ class _State extends State<GestionnaireEtablissementScreen> {
     final ville = adresse['ville'] ?? '';
     final rue = adresse['rue'] ?? '';
     final tel = _etab!['telephone'] ?? '';
-    final email = _etab!['email'] ?? '';
+    // email removed
     final note = (_etab!['noteMoyenne'] ?? 0.0).toDouble();
     final avis = _etab!['nombreAvis'] ?? 0;
     final statut = _etab!['statut'] ?? '';
@@ -230,7 +230,6 @@ class _State extends State<GestionnaireEtablissementScreen> {
                   const SizedBox(height: 12),
                   _InfoCard(children: [
                     _InfoRow(Icons.phone_outlined, 'Téléphone', tel),
-                    if (email.isNotEmpty) _InfoRow(Icons.email_outlined, 'Email', email),
                     _InfoRow(Icons.location_city_outlined, 'Ville', ville),
                     _InfoRow(Icons.place_outlined, 'Adresse', rue),
                   ]),
@@ -271,7 +270,6 @@ class _State extends State<GestionnaireEtablissementScreen> {
   void _showEditDialog() {
     final nomCtrl = TextEditingController(text: _etab!['nom'] ?? '');
     final telCtrl = TextEditingController(text: _etab!['telephone'] ?? '');
-    final emailCtrl = TextEditingController(text: _etab!['email'] ?? '');
     final rueCtrl = TextEditingController(
         text: _etab!['adresse']?['rue'] ?? '');
 
@@ -290,11 +288,6 @@ class _State extends State<GestionnaireEtablissementScreen> {
                 decoration: const InputDecoration(labelText: 'Téléphone',
                     prefixIcon: Icon(Icons.phone_outlined))),
             const SizedBox(height: 12),
-            TextField(controller: emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined))),
-            const SizedBox(height: 12),
             TextField(controller: rueCtrl,
                 decoration: const InputDecoration(labelText: 'Adresse / Rue',
                     prefixIcon: Icon(Icons.place_outlined))),
@@ -310,7 +303,6 @@ class _State extends State<GestionnaireEtablissementScreen> {
                 await ApiService().updateEtablissement(_etab!['_id'], {
                   'nom': nomCtrl.text.trim(),
                   'telephone': telCtrl.text.trim(),
-                  'email': emailCtrl.text.trim(),
                   'adresse': {
                     ...((_etab!['adresse'] as Map?) ?? {}),
                     'rue': rueCtrl.text.trim(),

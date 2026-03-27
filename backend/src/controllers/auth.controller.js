@@ -11,12 +11,15 @@ exports.register = async (req, res) => {
   try {
     const { nom, email, telephone, motDePasse, role } = req.body;
 
-    const existing = await User.findOne({ $or: [{ email }, { telephone }] });
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        error: existing.email === email ? 'Email deja utilise' : 'Telephone deja utilise',
-      });
+    const existingPhone = await User.findOne({ telephone });
+    if (existingPhone) {
+      return res.status(400).json({ success: false, error: 'Telephone deja utilise' });
+    }
+    if (email) {
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ success: false, error: 'Email deja utilise' });
+      }
     }
 
     const allowedRoles = [ROLES.CLIENT, ROLES.MANAGER];

@@ -61,10 +61,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Retourne [userId, devOtp?]
-  Future<(String?, String?)> register(String nom, String email, String tel, String mdp, String role) async {
+  Future<(String?, String?)> register(String nom, String tel, String mdp, String role) async {
     try {
       _error = null;
-      final res = await _api.register(nom, email, tel, mdp, role);
+      final res = await _api.register(nom, tel, mdp, role);
       return (res.data['userId'] as String?, res.data['devOtp'] as String?);
     } catch (e) {
       _error = _getError(e);
@@ -90,7 +90,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   String _getError(dynamic e) {
-    if (e is dynamic && e.response?.data != null) return e.response.data['error'] ?? 'Erreur';
+    try {
+      final data = e.response?.data;
+      if (data is Map) return data['error']?.toString() ?? 'Erreur';
+      if (data is String) return data;
+    } catch (_) {}
     return 'Erreur de connexion';
   }
 }

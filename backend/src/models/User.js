@@ -9,14 +9,6 @@ const userSchema = new mongoose.Schema({
     trim: true,
     minlength: 2,
   },
-  email: {
-    type: String,
-    required: [true, 'L email est requis'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Email invalide'],
-  },
   telephone: {
     type: String,
     required: [true, 'Le telephone est requis'],
