@@ -1,42 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../config/theme.dart';
 import '../search/search_screen.dart';
 import '../ticket/ticket_tracking_screen.dart';
 import '../profile/profile_screen.dart';
-import '../etablissement/etablissement_dashboard_screen.dart';
+import '../gestionnaire/gestionnaire_home_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+// Notifier global pour switcher d'onglet depuis n'importe quel écran
+final homeTabNotifier = ValueNotifier<int>(0);
+
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-  @override State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final isManager = auth.user?.role == 'gestionnaire';
+    final role = context.watch<AuthProvider>().user?.role;
+    if (role == 'gestionnaire') return const GestionnaireHomeScreen();
+    return const ClientHomeScreen();
+  }
+}
 
+// ─── NAVIGATION CLIENT ───────────────────────────────────────
+class ClientHomeScreen extends StatefulWidget {
+  const ClientHomeScreen({super.key});
+  @override State<ClientHomeScreen> createState() => _ClientHomeState();
+}
+
+class _ClientHomeState extends State<ClientHomeScreen> {
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    homeTabNotifier.addListener(_onTab);
+  }
+
+  void _onTab() => setState(() => _index = homeTabNotifier.value);
+
+  @override
+  void dispose() {
+    homeTabNotifier.removeListener(_onTab);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final screens = [
       const SearchScreen(),
       const TicketTrackingScreen(),
-      if (isManager) const EtablissementDashboardScreen(),
       const ProfileScreen(),
     ];
-
     return Scaffold(
-      body: screens[_currentIndex],
+      body: screens[_index],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: [
-          const NavigationDestination(icon: Icon(Icons.search), label: 'Recherche'),
-          const NavigationDestination(icon: Icon(Icons.confirmation_number_outlined), label: 'Mes Tickets'),
-          if (isManager) const NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-          const NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
+        selectedIndex: _index,
+        onDestinationSelected: (i) {
+          setState(() => _index = i);
+          homeTabNotifier.value = i;
+        },
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home), label: 'Accueil'),
+          NavigationDestination(icon: Icon(Icons.confirmation_number_outlined),
+              selectedIcon: Icon(Icons.confirmation_number), label: 'Mes Tickets'),
+          NavigationDestination(icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person), label: 'Profil'),
         ],
       ),
     );

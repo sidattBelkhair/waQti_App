@@ -1,10 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 import '../../config/theme.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  void _showEditDialog(BuildContext context, AuthProvider auth) {
+    final user = auth.user!;
+    final nomCtrl = TextEditingController(text: user.nom);
+    final emailCtrl = TextEditingController(text: user.email);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Modifier le profil'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: nomCtrl,
+            decoration: const InputDecoration(
+                labelText: 'Nom complet', prefixIcon: Icon(Icons.person_outline)),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+                labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ApiService().updateProfile({
+                  'nom': nomCtrl.text.trim(),
+                  'email': emailCtrl.text.trim(),
+                });
+                await auth.refreshProfile();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Profil mis a jour'),
+                      backgroundColor: WaqtiTheme.success));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Erreur: $e'),
+                      backgroundColor: WaqtiTheme.danger));
+                }
+              }
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +83,11 @@ class ProfileScreen extends StatelessWidget {
           _InfoTile(icon: Icons.circle, label: 'Statut', value: user.statut),
           const SizedBox(height: 32),
           SizedBox(width: double.infinity,
-            child: OutlinedButton.icon(icon: const Icon(Icons.edit), label: const Text('Modifier le profil'), onPressed: () {})),
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.edit),
+              label: const Text('Modifier le profil'),
+              onPressed: () => _showEditDialog(context, auth),
+            )),
           const SizedBox(height: 12),
           SizedBox(width: double.infinity,
             child: ElevatedButton.icon(

@@ -30,15 +30,16 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> login(String identifier, String mdp) async {
+  /// Retourne [userId, devOtp?] — devOtp est non-null seulement en dev
+  Future<(String?, String?)> login(String identifier, String mdp) async {
     try {
       _error = null;
       final res = await _api.login(identifier, mdp);
-      return res.data['userId'];
+      return (res.data['userId'] as String?, res.data['devOtp'] as String?);
     } catch (e) {
       _error = _getError(e);
       notifyListeners();
-      return null;
+      return (null, null);
     }
   }
 
@@ -59,15 +60,16 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<String?> register(String nom, String email, String tel, String mdp, String role) async {
+  /// Retourne [userId, devOtp?]
+  Future<(String?, String?)> register(String nom, String email, String tel, String mdp, String role) async {
     try {
       _error = null;
       final res = await _api.register(nom, email, tel, mdp, role);
-      return res.data['userId'];
+      return (res.data['userId'] as String?, res.data['devOtp'] as String?);
     } catch (e) {
       _error = _getError(e);
       notifyListeners();
-      return null;
+      return (null, null);
     }
   }
 

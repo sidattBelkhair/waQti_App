@@ -18,20 +18,38 @@ exports.getEtablissement = async (req, res) => {
 // PUT /api/etablissements/:id
 exports.updateEtablissement = async (req, res) => {
   try {
-    const { nom, description, adresse, telephone, photo, horaires } = req.body;
+    const { nom, description, adresse, telephone, email, photo, horaires } = req.body;
+    const etab = await Etablissement.findById(req.params.id);
+    if (!etab) return res.status(404).json({ success: false, error: 'Etablissement non trouve' });
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && etab.responsable.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: 'Non autorise' });
+    }
+    if (nom) etab.nom = nom;
+    if (description) etab.description = description;
+    if (adresse) etab.adresse = { ...etab.adresse.toObject?.() ?? etab.adresse, ...adresse };
+    if (telephone) etab.telephone = telephone;
+    if (email !== undefined) etab.email = email;
+    if (photo) etab.photo = photo;
+    if (horaires) etab.horaires = horaires;
+    await etab.save();
+    res.json({ success: true, etablissement: etab });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// DELETE /api/etablissements/:id
+exports.deleteEtablissement = async (req, res) => {
+  try {
     const etab = await Etablissement.findById(req.params.id);
     if (!etab) return res.status(404).json({ success: false, error: 'Etablissement non trouve' });
     if (etab.responsable.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, error: 'Non autorise' });
     }
-    if (nom) etab.nom = nom;
-    if (description) etab.description = description;
-    if (adresse) etab.adresse = adresse;
-    if (telephone) etab.telephone = telephone;
-    if (photo) etab.photo = photo;
-    if (horaires) etab.horaires = horaires;
-    await etab.save();
-    res.json({ success: true, etablissement: etab });
+    await Service.deleteMany({ etablissement: req.params.id });
+    await Etablissement.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Etablissement supprime' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

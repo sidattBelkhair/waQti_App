@@ -4,6 +4,8 @@ import '../../services/socket_service.dart';
 import '../../models/service.dart';
 import '../../config/theme.dart';
 import 'register_etablissement_screen.dart';
+import 'gestion_services_screen.dart';
+import 'qr_scanner_screen.dart';
 
 class EtablissementDashboardScreen extends StatefulWidget {
   const EtablissementDashboardScreen({super.key});
@@ -17,6 +19,7 @@ class _State extends State<EtablissementDashboardScreen> {
   Map<String, dynamic>? _fileData;
   bool _loading = true;
   bool _calling = false;
+  bool _markingAbsent = false;
 
   @override
   void initState() {
@@ -105,6 +108,26 @@ class _State extends State<EtablissementDashboardScreen> {
       }
     }
     setState(() => _calling = false);
+  }
+
+  Future<void> _marquerAbsent() async {
+    if (_selectedService == null) return;
+    setState(() => _markingAbsent = true);
+    try {
+      await ApiService().marquerAbsent(_selectedService!.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Client marque absent'),
+            backgroundColor: WaqtiTheme.warning));
+      }
+      await _loadFile();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Erreur: $e'), backgroundColor: WaqtiTheme.danger));
+      }
+    }
+    setState(() => _markingAbsent = false);
   }
 
   @override
@@ -211,7 +234,25 @@ class _State extends State<EtablissementDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_etab!['nom'] ?? 'Dashboard'),
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _loadFile)],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            tooltip: 'Scanner ticket client',
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const QrScannerScreen()))
+                .then((_) => _loadFile()),
+          ),
+          IconButton(
+            icon: const Icon(Icons.layers_outlined),
+            tooltip: 'Gerer les services',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => GestionServicesScreen(
+                etabId: _etab!['_id'], etabNom: _etab!['nom'] ?? '')),
+            ).then((_) => _load()),
+          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadFile),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadFile,
@@ -300,6 +341,28 @@ class _State extends State<EtablissementDashboardScreen> {
                         : WaqtiTheme.textSecondary),
               ),
             ),
+            const SizedBox(height: 10),
+            // Bouton marquer absent (visible seulement si ticket en cours)
+            if (ticketEnCours != null)
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  icon: _markingAbsent
+                      ? const SizedBox(width: 18, height: 18,
+                          child: CircularProgressIndicator(
+                              color: WaqtiTheme.warning, strokeWidth: 2))
+                      : const Icon(Icons.person_off_outlined,
+                          color: WaqtiTheme.warning),
+                  label: Text(
+                      _markingAbsent ? 'Traitement...' : 'Client absent',
+                      style: const TextStyle(
+                          color: WaqtiTheme.warning, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: WaqtiTheme.warning)),
+                  onPressed: _markingAbsent ? null : _marquerAbsent,
+                ),
+              ),
             const SizedBox(height: 20),
 
             // Liste file d'attente

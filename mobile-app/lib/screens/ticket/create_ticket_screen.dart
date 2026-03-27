@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../config/theme.dart';
-import 'ticket_tracking_screen.dart';
+import '../home/home_screen.dart';
+import '../../models/ticket.dart';
+import 'ticket_detail_screen.dart';
 
 class CreateTicketScreen extends StatefulWidget {
   final String etabId, etabNom, serviceId, serviceNom;
@@ -20,10 +22,12 @@ class _State extends State<CreateTicketScreen> {
       final res = await ApiService().createTicket(widget.etabId, widget.serviceId, _mode, _priorite);
       if (mounted) {
         final ticket = res.data['ticket'];
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Ticket ${ticket['numero']} cree ! Position: ${ticket['position']}'),
-          backgroundColor: WaqtiTheme.success));
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        final t = Ticket.fromJson(ticket);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => TicketDetailScreen(ticket: t)),
+          (route) => route.isFirst,
+        );
+        homeTabNotifier.value = 1;
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: WaqtiTheme.danger));

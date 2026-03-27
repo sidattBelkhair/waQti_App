@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
 import 'register_screen.dart';
 import 'otp_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,11 +21,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_identifierCtrl.text.isEmpty || _passwordCtrl.text.isEmpty) return;
     setState(() => _loading = true);
     final auth = context.read<AuthProvider>();
-    final userId = await auth.login(_identifierCtrl.text.trim(), _passwordCtrl.text);
+    final (userId, devOtp) = await auth.login(_identifierCtrl.text.trim(), _passwordCtrl.text);
     setState(() => _loading = false);
 
     if (userId != null && mounted) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => OTPScreen(userId: userId)));
+      Navigator.push(context, MaterialPageRoute(
+          builder: (_) => OTPScreen(userId: userId, devOtp: devOtp)));
     } else if (auth.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(auth.error!), backgroundColor: WaqtiTheme.danger));
     }
@@ -57,7 +59,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () => setState(() => _obscure = !_obscure)))),
               const SizedBox(height: 8),
               Align(alignment: Alignment.centerRight,
-                child: TextButton(onPressed: () {}, child: const Text('Mot de passe oublie ?'))),
+                child: TextButton(
+                  onPressed: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
+                  child: const Text('Mot de passe oublié ?'))),
               const SizedBox(height: 16),
               SizedBox(width: double.infinity,
                 child: ElevatedButton(

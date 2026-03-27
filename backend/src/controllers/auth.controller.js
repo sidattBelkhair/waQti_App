@@ -43,6 +43,7 @@ exports.register = async (req, res) => {
       success: true,
       message: 'Compte cree. Verifiez votre telephone pour le code OTP.',
       userId: user._id,
+      ...(process.env.NODE_ENV !== 'production' && { devOtp: otpCode }),
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -84,6 +85,8 @@ exports.login = async (req, res) => {
       message: 'Code OTP envoye',
       userId: user._id,
       requiresOTP: true,
+      // En développement : retourner l'OTP pour faciliter les tests
+      ...(process.env.NODE_ENV !== 'production' && { devOtp: otpCode }),
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -250,9 +253,14 @@ exports.forgotPassword = async (req, res) => {
     };
     await user.save();
 
-    console.log('[Reset] ' + telephone + ': ' + resetToken);
+    const shortToken = resetToken.substring(0, 8).toUpperCase();
+    console.log('[Reset] ' + telephone + ': ' + shortToken);
     await sendResetLink(telephone, resetToken);
-    res.json({ success: true, message: 'Lien de reinitialisation envoye par SMS' });
+    res.json({
+      success: true,
+      message: 'Code de réinitialisation envoyé par SMS',
+      ...(process.env.NODE_ENV !== 'production' && { devToken: shortToken }),
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -263,12 +271,16 @@ exports.resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
+    // Accepte le token complet OU les 8 premiers chars en majuscules (mode SMS)
     const user = await User.findOne({
-      'resetPassword.token': token,
+      $or: [
+        { 'resetPassword.token': token },
+        { 'resetPassword.token': { $regex: new RegExp('^' + token, 'i') } },
+      ],
       'resetPassword.expiresAt': { $gt: new Date() },
     });
 
-    if (!user) return res.status(400).json({ success: false, error: 'Token invalide ou expire' });
+    if (!user) return res.status(400).json({ success: false, error: 'Code invalide ou expiré' });
 
     user.motDePasse = newPassword;
     user.resetPassword = { token: null, expiresAt: null };

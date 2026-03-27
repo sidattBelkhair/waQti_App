@@ -202,6 +202,52 @@ exports.validerPresence = async (req, res) => {
   }
 };
 
+// POST /api/tickets/scan/:numero/valider — valider présence par numéro de ticket (QR simple)
+exports.validerPresenceByNumero = async (req, res) => {
+  try {
+    const { numero } = req.params;
+    const io = req.app.get('io');
+
+    const ticket = await Ticket.findOne({ numero: numero.toUpperCase() })
+      .populate('utilisateur', 'nom telephone');
+    if (!ticket) return res.status(404).json({ success: false, error: 'Ticket non trouvé' });
+    if (ticket.statut !== TICKET_STATUS.WAITING) {
+      return res.status(400).json({ success: false, error: 'Ticket déjà traité ou annulé' });
+    }
+
+    const file = await File.findOne({ service: ticket.service });
+
+    if (file && file.ticketEnCours) {
+      const precedent = await Ticket.findById(file.ticketEnCours);
+      if (precedent) {
+        precedent.statut = TICKET_STATUS.COMPLETED;
+        precedent.finTraitement = new Date();
+        await precedent.save();
+        file.stats.clientsTraites += 1;
+      }
+    }
+
+    ticket.statut = TICKET_STATUS.IN_PROGRESS;
+    ticket.debutTraitement = new Date();
+    await ticket.save();
+
+    if (file) {
+      file.ticketEnCours = ticket._id;
+      file.tickets = file.tickets.filter(t => t.toString() !== ticket._id.toString());
+      await file.save();
+      await recalculerPositions(file._id, io);
+    }
+
+    res.json({
+      success: true,
+      message: 'Présence validée',
+      client: { nom: ticket.utilisateur.nom, numero: ticket.numero },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 // POST /api/files/:serviceId/appeler-suivant
 exports.appelSuivant = async (req, res) => {
   try {
@@ -263,6 +309,59 @@ exports.appelSuivant = async (req, res) => {
       message: 'Client suivant appele',
       client: { nom: prochain.utilisateur.nom, numero: prochain.numero },
     });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// GET /api/tickets/etablissement — tickets de l'etablissement du gestionnaire
+exports.getEtablissementTickets = async (req, res) => {
+  try {
+    const Etablissement = require('../models/Etablissement');
+    const etab = await Etablissement.findOne({ responsable: req.user._id });
+    if (!etab) return res.status(404).json({ success: false, error: 'Aucun etablissement' });
+
+    const tickets = await Ticket.find({
+      etablissement: etab._id,
+      statut: { $in: ['en_cours', 'termine', 'absent'] },
+    })
+      .populate('utilisateur', 'nom telephone')
+      .populate('service', 'nom')
+      .sort({ updatedAt: -1 })
+      .limit(100);
+
+    res.json({ success: true, tickets });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+exports.marquerAbsent = async (req, res) => {
+  try {
+    const { serviceId } = req.params;
+    const io = req.app.get('io');
+
+    const file = await File.findOne({ service: serviceId });
+    if (!file || !file.ticketEnCours) {
+      return res.status(404).json({ success: false, error: 'Aucun ticket en cours' });
+    }
+
+    const ticket = await Ticket.findById(file.ticketEnCours);
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: 'Ticket introuvable' });
+    }
+
+    ticket.statut = 'absent';
+    ticket.finTraitement = new Date();
+    await ticket.save();
+
+    file.ticketEnCours = null;
+    file.stats.clientsAbsents = (file.stats.clientsAbsents || 0) + 1;
+    await file.save();
+
+    await recalculerPositions(file._id, io);
+
+    res.json({ success: true, message: 'Client marque absent' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -67,10 +67,15 @@ class ApiService {
   }
   Future<Response> forgotPassword(String tel) =>
     _dio.post('/auth/forgot-password', data: {'telephone': tel});
+  Future<Response> resetPassword(String token, String newPassword) =>
+    _dio.post('/auth/reset-password', data: {'token': token, 'newPassword': newPassword});
   Future<Response> registerEtablissement(Map<String, dynamic> data) =>
     _dio.post('/auth/register-etablissement', data: data);
-  Future<Response> searchEtablissements({String? nom, String? type, String? ville}) =>
-    _dio.get('/etablissements', queryParameters: {'nom': nom, 'type': type, 'ville': ville}..removeWhere((k, v) => v == null));
+  Future<Response> searchEtablissements({String? nom, String? type, String? ville, double? lat, double? lng}) =>
+    _dio.get('/etablissements', queryParameters: {
+      'nom': nom, 'type': type, 'ville': ville,
+      'lat': lat?.toString(), 'lng': lng?.toString(),
+    }..removeWhere((k, v) => v == null));
   Future<Response> getEtablissement(String id) => _dio.get('/etablissements/$id');
   Future<Response> getServices(String etabId) => _dio.get('/etablissements/$etabId/services');
   Future<Response> getPersonnel(String etabId) => _dio.get('/etablissements/$etabId/personnel');
@@ -84,10 +89,22 @@ class ApiService {
   Future<Response> cancelTicket(String id) => _dio.delete('/tickets/$id/annuler');
   Future<Response> signalRetard(String id) => _dio.post('/tickets/$id/signaler-retard');
   Future<Response> validerPresence(String id) => _dio.post('/tickets/$id/valider-presence');
+  Future<Response> validerPresenceByNumero(String numero) => _dio.post('/tickets/scan/$numero/valider');
   Future<Response> getFileStatus(String serviceId) => _dio.get('/files/$serviceId');
   Future<Response> getPosition(String serviceId) => _dio.get('/files/$serviceId/position');
   Future<Response> appelSuivant(String serviceId, int guichet) =>
     _dio.post('/files/$serviceId/appeler-suivant', data: {'guichet': guichet});
+  Future<Response> marquerAbsent(String serviceId) =>
+    _dio.post('/files/$serviceId/absent');
+  Future<Response> createService(String etabId, Map<String, dynamic> data) =>
+    _dio.post('/etablissements/$etabId/services', data: data);
+  Future<Response> deleteService(String etabId, String serviceId) =>
+    _dio.delete('/etablissements/$etabId/services/$serviceId');
+  Future<Response> getEtablissementTickets() => _dio.get('/tickets/etablissement');
+  Future<Response> updateEtablissement(String id, Map<String, dynamic> data) =>
+    _dio.put('/etablissements/$id', data: data);
+  Future<Response> deleteEtablissement(String id) =>
+    _dio.delete('/etablissements/$id');
 
   Future<void> saveTokens(String access, String refresh) async {
     final prefs = await SharedPreferences.getInstance();

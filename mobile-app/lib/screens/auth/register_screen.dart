@@ -26,14 +26,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     setState(() => _loading = true);
     final auth = context.read<AuthProvider>();
-    final userId = await auth.register(
+    final (userId, devOtp) = await auth.register(
         _nomCtrl.text.trim(), _emailCtrl.text.trim(),
         _telCtrl.text.trim(), _mdpCtrl.text, _role);
     setState(() => _loading = false);
 
     if (userId != null && mounted) {
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => OTPScreen(userId: userId)));
+          context, MaterialPageRoute(builder: (_) => OTPScreen(userId: userId, devOtp: devOtp)));
     } else if (auth.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(auth.error!), backgroundColor: WaqtiTheme.danger));

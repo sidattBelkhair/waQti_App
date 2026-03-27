@@ -1,12 +1,17 @@
 class ApiConfig {
-  // Changez cette URL selon votre environnement
-  // Emulateur Android: 10.0.2.2
-  // Appareil physique: votre IP locale (ex: 192.168.1.x)
-  // static const String baseUrl = 'http://10.0.2.2:5000/api';
-    static const String baseUrl = 'http://localhost:5000/api';
+  // ============================================================
+  // CHANGE ICI selon l'environnement :
+  // ============================================================
 
-  // Pour appareil physique, decommentez et changez l'IP:
+  // ✅ PRODUCTION (Render) — pour partager avec tes amis
+  static const String baseUrl = 'https://waqti-api.onrender.com/api';
+
+  // 🖥️  Dev local (émulateur Android)
+  // static const String baseUrl = 'http://10.0.2.2:5000/api';
+
+  // 📱 Dev local (appareil physique — remplace par ton IP WiFi)
   // static const String baseUrl = 'http://192.168.1.XXX:5000/api';
 
+  // ============================================================
   static const Duration timeout = Duration(seconds: 30);
 }

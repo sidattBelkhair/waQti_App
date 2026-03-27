@@ -10,6 +10,7 @@ router.get('/:id/avis', etab.getAvis);
 // Routes protegees
 router.use(authenticateToken);
 router.put('/:id', etab.updateEtablissement);
+router.delete('/:id', etab.deleteEtablissement);
 router.post('/:id/fermetures', etab.addFermeture);
 router.get('/:id/services', etab.getServices);
 router.post('/:id/services', etab.createService);
