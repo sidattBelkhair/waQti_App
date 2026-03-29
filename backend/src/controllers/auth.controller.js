@@ -38,15 +38,15 @@ exports.register = async (req, res) => {
 
     await user.save();
 
-    // TODO: Envoyer SMS via Twilio
     console.log('[OTP] ' + telephone + ': ' + otpCode);
-    await sendOTP(telephone, otpCode);
+    const smsSent = await sendOTP(telephone, otpCode);
+    console.log('[OTP] SMS sent:', smsSent ? 'oui' : 'non (check Infobip logs)');
 
     res.status(201).json({
       success: true,
       message: 'Compte cree. Verifiez votre telephone pour le code OTP.',
       userId: user._id,
-      ...(process.env.NODE_ENV !== 'production' && { devOtp: otpCode }),
+      devOtp: otpCode,
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -88,8 +88,7 @@ exports.login = async (req, res) => {
       message: 'Code OTP envoye',
       userId: user._id,
       requiresOTP: true,
-      // En développement : retourner l'OTP pour faciliter les tests
-      ...(process.env.NODE_ENV !== 'production' && { devOtp: otpCode }),
+      devOtp: otpCode,
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
