@@ -3,642 +3,678 @@
 > **"Digitaliser l'attente. Respecter le temps de chacun."**
 >
 > Application mobile de gestion de file d'attente conçue pour la Mauritanie.
-> Les citoyens prennent un ticket à distance, suivent leur position en temps réel,
-> et reçoivent une notification quand c'est leur tour.
 
 ---
 
-## Table des matières
+## Table des Matières
 
-1. [Vue d'ensemble](#vue-densemble)
-2. [Architecture](#architecture)
-3. [Prérequis](#prérequis)
-4. [Installation](#installation)
-5. [Configuration](#configuration)
-6. [Démarrage](#démarrage)
-7. [Guide de test complet](#guide-de-test-complet)
-8. [API Reference](#api-reference)
-9. [Comptes de test](#comptes-de-test)
-10. [Problèmes fréquents](#problèmes-fréquents)
-
----
-
-## Vue d'ensemble
-
-WaQti est composé de 3 parties :
-
-| Partie | Technologie | Description |
-|--------|-------------|-------------|
-| **Mobile App** | Flutter (Android) | Application pour clients et gestionnaires |
-| **Admin Web** | React + Vite | Dashboard d'administration |
-| **Backend** | Node.js + Express | API REST + WebSocket temps réel |
-| **Base de données** | MongoDB Atlas | Hébergée dans le cloud |
-
-### Les 3 rôles utilisateurs
-
-| Rôle | Accès | Fonctions |
-|------|-------|-----------|
-| **Client** | App mobile | Chercher établissements, prendre/suivre tickets |
-| **Gestionnaire** | App mobile | Gérer file d'attente, appeler clients |
-| **Admin** | Web + API | Valider établissements, gérer utilisateurs |
+1. [C'est quoi WaQti ?](#1-cest-quoi-waqti-)
+2. [Architecture du projet](#2-architecture-du-projet)
+3. [Prérequis](#3-prérequis)
+4. [Installation et lancement local](#4-installation-et-lancement-local)
+5. [Backend — API Node.js](#5-backend--api-nodejs)
+6. [Application mobile — Flutter](#6-application-mobile--flutter)
+7. [Dashboard Admin — React](#7-dashboard-admin--react)
+8. [Variables d'environnement](#8-variables-denvironnement)
+9. [Déploiement en production (Render)](#9-déploiement-en-production-render)
+10. [Tester l'API](#10-tester-lapi)
+11. [Build APK Android](#11-build-apk-android)
+12. [Comment ça marche — Flux complet](#12-comment-ça-marche--flux-complet)
+13. [Roles et permissions](#13-roles-et-permissions)
+14. [Base de données — Modèles](#14-base-de-données--modèles)
 
 ---
 
-## Architecture
+## 1. C'est quoi WaQti ?
 
-```
-┌─────────────────────┐     HTTP + WebSocket    ┌──────────────────────┐
-│   App Mobile        │ ◄─────────────────────► │  Backend Node.js     │
-│   Flutter           │                          │  Port 5000           │
-├─────────────────────┤     HTTP REST           ├──────────────────────┤
-│   Admin Web         │ ◄─────────────────────► │  MongoDB Atlas       │
-│   React (Port 5173) │                          │  (Cloud)             │
-└─────────────────────┘                          └──────────────────────┘
-```
+**WaQti** est une application de gestion de file d'attente pour les établissements mauritaniens (hôpitaux, banques, communes, préfectures...).
 
----
+**Problème résolu** : Les gens attendent des heures debout dans des files. WaQti leur permet de prendre un ticket virtuel depuis leur téléphone, de suivre leur position en temps réel, et d'être notifiés quand c'est leur tour.
 
-## Prérequis
+**3 types d'utilisateurs :**
 
-### Pour le backend
-
-- **Node.js** v18 ou supérieur → https://nodejs.org
-- **npm** v9+
-
-Vérifier :
-```bash
-node --version   # doit afficher v18+
-npm --version    # doit afficher 9+
-```
-
-### Pour l'app mobile
-
-- **Flutter SDK** 3.2.0+ → https://flutter.dev/docs/get-started/install
-- **Android Studio** avec un émulateur Android (API 21+) OU un téléphone Android connecté en USB
-- **Dart SDK** 3.2.0+
-
-Vérifier :
-```bash
-flutter doctor    # doit tout afficher en vert
-```
-
-### Pour le dashboard admin (optionnel)
-
-- **Node.js** v18+
-- Un navigateur web moderne (Chrome, Firefox)
+| Rôle | Ce qu'il peut faire |
+|---|---|
+| **Client** | Prendre un ticket, suivre sa position, prendre RDV |
+| **Gestionnaire** | Gérer son établissement, ses services, appeler le suivant |
+| **Admin** | Superviser tout le système via le web dashboard |
 
 ---
 
-## Installation
-
-### 1. Récupérer le projet
-
-```bash
-# Si vous avez reçu une archive .zip, extrayez-la
-# Le dossier s'appelle waQti_App/
-cd waQti_App/
-```
-
-### 2. Installer les dépendances du backend
-
-```bash
-cd backend/
-npm install
-```
-
-### 3. Installer les dépendances de l'app mobile
-
-```bash
-cd mobile-app/
-flutter pub get
-```
-
-### 4. Installer les dépendances du dashboard admin (optionnel)
-
-```bash
-cd admin-web/frontend/
-npm install
-```
-
----
-
-## Configuration
-
-### Backend — fichier `.env`
-
-Le fichier `backend/.env` est déjà configuré et prêt à l'emploi.
-La base de données MongoDB est hébergée dans le cloud (MongoDB Atlas), **aucune installation locale nécessaire**.
-
-> Ne modifiez pas ce fichier sauf si vous avez votre propre MongoDB.
-
-### App Mobile — URL du backend
-
-Ouvrez le fichier `mobile-app/lib/config/api_config.dart` et choisissez selon votre situation :
-
-```dart
-// Si vous testez sur ÉMULATEUR Android
-static const String baseUrl = 'http://10.0.2.2:5000/api';
-
-// Si vous testez sur TÉLÉPHONE PHYSIQUE
-// Remplacez par l'IP de votre ordinateur sur le réseau local
-static const String baseUrl = 'http://192.168.1.XXX:5000/api';
-```
-
-**Comment trouver votre IP locale :**
-```bash
-# Linux / Mac
-ip addr show | grep "inet 192"
-
-# Windows
-ipconfig
-# Cherchez "Adresse IPv4"
-```
-
----
-
-## Démarrage
-
-### Étape 1 — Démarrer le backend
-
-```bash
-cd backend/
-npm run dev
-```
-
-**Sortie attendue :**
-```
-WaQti API
-Serveur demarre sur le port 5000
-Environnement: development
-WebSocket: active
-MongoDB connecte: waqti.pwhcmv0.mongodb.net
-```
-
-> Gardez ce terminal OUVERT pendant toute la durée des tests.
-> Le code OTP de vérification s'affiche dans ce terminal.
-
-### Étape 2 — Lancer l'app mobile
-
-```bash
-cd mobile-app/
-flutter run
-```
-
-> Assurez-vous qu'un émulateur est ouvert avant de lancer cette commande,
-> ou qu'un téléphone Android est connecté en USB avec le débogage USB activé.
-
-### Étape 3 — Lancer le dashboard admin (optionnel)
-
-```bash
-cd admin-web/frontend/
-npm run dev
-```
-
-Ouvrez http://localhost:5173 dans votre navigateur.
-
----
-
-## Guide de test complet
-
----
-
-### PARTIE 1 — GESTIONNAIRE
-
----
-
-#### 1.1 — Créer un compte gestionnaire
-
-1. Ouvrez l'app → écran de connexion
-2. Appuyez sur **"Créer un compte"**
-3. Remplissez le formulaire :
-   - Nom : `Mohamed Gestionnaire`
-   - Email : `gestionnaire@test.com`
-   - Téléphone : `+22287654321`
-   - Mot de passe : `123456`
-4. Sélectionnez le rôle **Gestionnaire** (carte de droite)
-5. Appuyez sur **"Créer mon compte"**
-6. Regardez le terminal backend, vous verrez :
-   ```
-   [OTP] +22287654321: 847291
-   ```
-7. Saisissez ce code dans l'app
-8. Vous êtes connecté — vous voyez **4 onglets** en bas (Recherche / Mes Tickets / Dashboard / Profil)
-
----
-
-#### 1.2 — Enregistrer un établissement
-
-1. Appuyez sur l'onglet **Dashboard** (icône tableau de bord)
-2. Vous voyez "Aucun établissement" → appuyez **"Enregistrer mon établissement"**
-3. Remplissez :
-   - Nom : `Banque Nationale de Mauritanie`
-   - Type : `Banque`
-   - Rue/Quartier : `Rue du Port, Tevragh Zeina`
-   - Ville : `Nouakchott`
-   - Téléphone : `+22200001111`
-4. Appuyez **"Soumettre pour validation"**
-5. Écran de succès "Demande envoyée — En attente de validation"
-
----
-
-#### 1.3 — Valider l'établissement (simulation admin via terminal)
-
-Ouvrez un nouveau terminal et exécutez ces commandes une par une :
-
-**Étape A — Se connecter pour obtenir un token :**
-```bash
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"identifier":"gestionnaire@test.com","motDePasse":"123456"}'
-```
-Notez le `userId` dans la réponse.
-
-**Étape B — Vérifier l'OTP (regardez le terminal backend) :**
-```bash
-curl -X POST http://localhost:5000/api/auth/verify-otp \
-  -H "Content-Type: application/json" \
-  -d '{"userId":"COLLE_userId_ICI","code":"COLLE_OTP_ICI"}'
-```
-Notez le `accessToken` dans la réponse.
-
-**Étape C — Promouvoir le compte en admin (dans MongoDB) :**
-```bash
-mongosh "mongodb+srv://waqti:hMg6nRWVqktzMQyr@waqti.pwhcmv0.mongodb.net/waqti" \
-  --eval 'db.users.updateOne({email:"gestionnaire@test.com"},{$set:{role:"admin"}})'
-```
-
-**Étape D — Se reconnecter pour avoir un token admin (répéter A et B)**
-
-**Étape E — Récupérer l'ID de l'établissement :**
-```bash
-curl -X GET "http://localhost:5000/api/admin/etablissements" \
-  -H "Authorization: Bearer VOTRE_TOKEN_ADMIN"
-```
-Notez le `_id` de l'établissement.
-
-**Étape F — Valider l'établissement :**
-```bash
-curl -X PATCH "http://localhost:5000/api/admin/etablissements/ETAB_ID_ICI/statut" \
-  -H "Authorization: Bearer VOTRE_TOKEN_ADMIN" \
-  -H "Content-Type: application/json" \
-  -d '{"statut":"actif"}'
-```
-
----
-
-#### 1.4 — Créer un service dans l'établissement
-
-```bash
-curl -X POST "http://localhost:5000/api/etablissements/ETAB_ID_ICI/services" \
-  -H "Authorization: Bearer VOTRE_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"nom":"Caisse","description":"Depot et retrait","dureeEstimee":8}'
-```
-
-Notez le `_id` du service dans la réponse.
-
----
-
-#### 1.5 — Voir le dashboard actif
-
-1. Dans l'app gestionnaire → onglet **Dashboard**
-2. Appuyez **"Vérifier le statut"** (ou tirez vers le bas pour rafraîchir)
-3. Vous voyez maintenant le vrai dashboard :
-
-```
-┌──────────────────────────────────┐
-│  En attente : 0  │  Traités : 0  │
-├──────────────────────────────────┤
-│  Ticket en cours : Aucun         │
-├──────────────────────────────────┤
-│    [ Appeler le suivant ]        │  ← grisé (file vide)
-└──────────────────────────────────┘
-File vide — aucun client en attente
-```
-
----
-
-### PARTIE 2 — CLIENT
-
----
-
-#### 2.1 — Créer un compte client
-
-1. Déconnectez-vous (onglet Profil → Déconnexion)
-2. Appuyez **"Créer un compte"**
-3. Remplissez :
-   - Nom : `Ahmed Client`
-   - Email : `client@test.com`
-   - Téléphone : `+22212345678`
-   - Mot de passe : `123456`
-   - Rôle : **Client** (carte de gauche)
-4. OTP depuis le terminal → saisissez-le
-5. Connecté — vous voyez **3 onglets** : Recherche / Mes Tickets / Profil
-
----
-
-#### 2.2 — Rechercher un établissement
-
-1. Onglet **Recherche**
-2. Appuyez sur le filtre **"Banque"** en haut
-3. Vous voyez `Banque Nationale de Mauritanie`
-4. Appuyez dessus → page détail avec services, horaires, avis
-
----
-
-#### 2.3 — Prendre un ticket
-
-1. Sur la page détail → section **Services** → appuyez **"Prendre ticket"** sur "Caisse"
-2. Choisissez :
-   - Mode : **A distance (depuis chez moi)**
-   - Priorité : **Normal**
-3. Appuyez **"Confirmer le ticket"**
-4. Message de confirmation avec le numéro du ticket
-5. Allez dans l'onglet **Mes Tickets**
-6. Vous voyez votre ticket :
-
-```
-┌─────────────────────────────────────┐
-│  WQ260318-0001              En attente│
-├─────────────────────────────────────┤
-│  Banque Nationale — Caisse          │
-│                                     │
-│  Position : 1    Attente : ~8 min   │
-│                                     │
-│  [Retard]          [Annuler]        │
-└─────────────────────────────────────┘
-```
-
----
-
-#### 2.4 — Créer un 2ème client (pour tester la file)
-
-Répétez les étapes 2.1 à 2.3 avec :
-- Email : `client2@test.com`
-- Téléphone : `+22211111111`
-
-Ce client aura la position **2** avec **~16 min** d'attente.
-
----
-
-### PARTIE 3 — TEST TEMPS RÉEL (CLÉ DE L'APPLICATION)
-
----
-
-#### 3.1 — Appeler le suivant
-
-> Pour ce test, il faut 2 émulateurs/téléphones OU utiliser un seul appareil en alternant les comptes.
-
-**Sur l'appareil gestionnaire :**
-1. Onglet Dashboard → `En attente : 2`
-2. Appuyez **"Appeler le suivant"**
-3. Popup : numéro et nom du client appelé
-
-**Sur l'appareil client 1 (simultanément) :**
-4. Une alerte apparaît automatiquement :
-   ```
-   C'est votre tour !
-   Rendez-vous au guichet 1.
-   ```
-
-**Sur l'appareil client 2 :**
-5. Position passe de **2** à **1** automatiquement
-
----
-
-#### 3.2 — Appeler le suivant une 2ème fois
-
-1. Gestionnaire appuie à nouveau sur **"Appeler le suivant"**
-2. Client 2 reçoit : `"C'est votre tour ! Guichet 1"`
-3. Dashboard gestionnaire → `En attente : 0`, file vide
-
----
-
-### PARTIE 4 — FONCTIONNALITÉS SECONDAIRES
-
----
-
-#### 4.1 — Signaler un retard
-
-1. Client → onglet "Mes Tickets"
-2. Appuyez **"Retard"** sur un ticket actif
-3. Message : `"Retard signalé, votre place est conservée"`
-
----
-
-#### 4.2 — Annuler un ticket
-
-1. Client → onglet "Mes Tickets"
-2. Appuyez **"Annuler"** → confirmez dans la popup
-3. Le ticket disparaît de la liste
-4. Sur le dashboard gestionnaire, le compteur diminue automatiquement
-
----
-
-#### 4.3 — Profil utilisateur
-
-1. Onglet **Profil**
-2. Informations affichées : nom, email, téléphone, rôle
-3. Bouton **Déconnexion** → retour à l'écran de login
-
----
-
-### PARTIE 5 — DASHBOARD ADMIN WEB
-
----
-
-1. Ouvrez http://localhost:5173
-2. Connectez-vous avec le compte admin
-3. Vous voyez le tableau de bord :
-   - Statistiques globales (utilisateurs, établissements, tickets)
-   - Graphique tickets par jour (7 derniers jours)
-   - Top établissements par volume
-4. Menu **Établissements** → liste complète avec statuts
-5. Bouton pour changer le statut (actif / suspendu / en_attente)
-6. Menu **Utilisateurs** → gestion avec filtres
-
----
-
-## API Reference
-
-> Base URL : `http://localhost:5000/api`
-> Routes protégées : ajouter le header `Authorization: Bearer <token>`
-
-### Authentification
-
-| Méthode | Endpoint | Description | Auth |
-|---------|----------|-------------|------|
-| POST | `/auth/register` | Inscription | Non |
-| POST | `/auth/login` | Connexion | Non |
-| POST | `/auth/verify-otp` | Vérifier OTP | Non |
-| GET | `/auth/profile` | Mon profil | Oui |
-| POST | `/auth/logout` | Déconnexion | Oui |
-| GET | `/auth/my-etablissement` | Mon établissement | Oui |
-| POST | `/auth/register-etablissement` | Créer établissement | Oui (gestionnaire) |
-
-### Établissements
-
-| Méthode | Endpoint | Description | Auth |
-|---------|----------|-------------|------|
-| GET | `/etablissements` | Recherche (actifs uniquement) | Non |
-| GET | `/etablissements/:id` | Détail | Non |
-| GET | `/etablissements/:id/services` | Liste des services | Oui |
-| POST | `/etablissements/:id/services` | Créer un service | Oui |
-| GET | `/etablissements/:id/avis` | Avis et notes | Non |
-| POST | `/etablissements/:id/avis` | Poster un avis | Oui |
-
-### Tickets
-
-| Méthode | Endpoint | Description | Auth |
-|---------|----------|-------------|------|
-| GET | `/tickets/mes-tickets` | Mes tickets actifs | Oui |
-| POST | `/tickets` | Créer un ticket | Oui |
-| DELETE | `/tickets/:id/annuler` | Annuler | Oui |
-| POST | `/tickets/:id/signaler-retard` | Signaler retard | Oui |
-
-### File d'attente
-
-| Méthode | Endpoint | Description | Auth |
-|---------|----------|-------------|------|
-| GET | `/files/:serviceId` | Statut de la file | Oui |
-| POST | `/files/:serviceId/appeler-suivant` | Appeler client suivant | Oui |
-
-### Admin
-
-| Méthode | Endpoint | Description | Auth |
-|---------|----------|-------------|------|
-| GET | `/admin/stats` | Statistiques globales | Admin |
-| GET | `/admin/etablissements` | Tous les établissements | Admin |
-| POST | `/admin/etablissements` | Créer (validé directement) | Admin |
-| PATCH | `/admin/etablissements/:id/statut` | Changer statut | Admin |
-| GET | `/admin/users` | Tous les utilisateurs | Admin |
-| PATCH | `/admin/users/:id/statut` | Suspendre / activer | Admin |
-| DELETE | `/admin/users/:id` | Supprimer utilisateur | Admin |
-
----
-
-## Comptes de test
-
-| Compte | Email | Téléphone | Mot de passe | Rôle |
-|--------|-------|-----------|--------------|------|
-| Client 1 | `client@test.com` | `+22212345678` | `123456` | client |
-| Client 2 | `client2@test.com` | `+22211111111` | `123456` | client |
-| Gestionnaire | `gestionnaire@test.com` | `+22287654321` | `123456` | gestionnaire |
-| Admin | Promu via MongoDB | — | — | admin |
-
-> Les OTP s'affichent dans la console du backend (terminal nodemon).
-> En production, ils sont envoyés par SMS via Twilio.
-
----
-
-## Structure des fichiers
+## 2. Architecture du projet
 
 ```
 waQti_App/
-├── backend/                    <- API Node.js
-│   ├── server.js               <- Point d'entrée
-│   ├── .env                    <- Configuration
-│   ├── src/
-│   │   ├── controllers/        <- Logique métier
-│   │   ├── models/             <- Schémas MongoDB
-│   │   ├── routes/             <- Endpoints API
-│   │   ├── middleware/         <- Auth JWT, rate limiting
-│   │   ├── sockets/            <- WebSocket temps réel
-│   │   └── utils/              <- OTP, SMS, QR code
-│   └── package.json
-│
-├── mobile-app/                 <- App Flutter
-│   ├── lib/
-│   │   ├── main.dart           <- Point d'entrée
-│   │   ├── config/             <- URL API, thème couleurs
-│   │   ├── models/             <- Modèles de données
-│   │   ├── providers/          <- État global (auth)
-│   │   ├── services/           <- HTTP (Dio) + WebSocket
-│   │   └── screens/
-│   │       ├── auth/           <- Login, Register, OTP
-│   │       ├── home/           <- Navigation principale
-│   │       ├── search/         <- Recherche établissements
-│   │       ├── ticket/         <- Créer et suivre tickets
-│   │       ├── etablissement/  <- Dashboard gestionnaire
-│   │       └── profile/        <- Profil utilisateur
-│   └── pubspec.yaml
-│
-└── admin-web/frontend/         <- Dashboard React
-    ├── src/
-    │   ├── pages/              <- Dashboard, Etablissements, Users
-    │   ├── components/         <- Layout, StatCard, DataTable
-    │   └── services/           <- API Axios
-    └── package.json
+├── backend/          # API Node.js + Express + MongoDB
+├── mobile-app/       # Application Flutter (Android/iOS)
+├── admin-web/        # Dashboard admin React + Vite
+└── render.yaml       # Config de déploiement Render
 ```
 
----
+**Stack technique :**
 
-## Problèmes fréquents
-
-### "MongoDB erreur: querySrv ECONNREFUSED"
-Le backend ne peut pas résoudre le DNS MongoDB.
-
-Solution : vérifier que le script dans `backend/package.json` contient :
-```json
-"dev": "NODE_OPTIONS=--dns-result-order=ipv4first nodemon server.js"
-```
-
----
-
-### "Connection refused" dans l'app mobile
-L'app ne trouve pas le backend.
-
-Solution : vérifier l'URL dans `mobile-app/lib/config/api_config.dart`
-- Émulateur Android → `http://10.0.2.2:5000/api`
-- Téléphone physique → `http://192.168.X.X:5000/api` (votre IP locale)
-- Ne jamais utiliser `localhost` sur téléphone physique
+| Composant | Technologie |
+|---|---|
+| API Backend | Node.js 22, Express 4, MongoDB Atlas, Socket.IO |
+| Mobile App | Flutter 3, Dart, Provider, Dio, Socket.IO |
+| Admin Web | React 18, Vite, Tailwind CSS, Recharts |
+| Base de données | MongoDB Atlas (cloud) |
+| SMS OTP | Infobip (100 SMS/mois gratuits) |
+| Déploiement | Render.com (backend gratuit) |
+| Notifications Push | Firebase Cloud Messaging |
 
 ---
 
-### Le code OTP n'arrive pas par SMS
-Normal en développement. L'OTP s'affiche dans le terminal backend :
-```
-[OTP] +222XXXXXXXX: 123456
-```
+## 3. Prérequis
+
+Installe ces outils avant de commencer :
+
+### Pour le backend
+- [Node.js 18+](https://nodejs.org/) → vérifie avec `node --version`
+- Un compte [MongoDB Atlas](https://cloud.mongodb.com) (gratuit)
+
+### Pour l'application mobile
+- [Flutter SDK 3.x](https://flutter.dev/docs/get-started/install) → vérifie avec `flutter --version`
+- Android Studio + SDK Android
+- Un téléphone Android (mode développeur activé) ou un émulateur
+
+### Comptes nécessaires pour la production
+- [Render.com](https://render.com) — hébergement backend (gratuit)
+- [MongoDB Atlas](https://cloud.mongodb.com) — base de données (gratuit)
+- [Infobip](https://portal.infobip.com) — SMS OTP (100 SMS/mois gratuits)
 
 ---
 
-### "Seuls les gestionnaires peuvent enregistrer un établissement"
-Vous êtes connecté avec un compte `client`.
-Solution : utiliser un compte avec `role: "gestionnaire"`.
+## 4. Installation et lancement local
 
----
+### Cloner le projet
 
-### L'établissement n'apparaît pas dans la recherche
-L'établissement est encore `en_attente`.
-Solution : le valider via l'API admin (voir section 1.3 du guide de test).
-
----
-
-### flutter pub get échoue
 ```bash
-flutter clean
+git clone https://github.com/sidattBelkhair/waQti_App.git
+cd waQti_App
+```
+
+### Lancer le backend
+
+```bash
+cd backend
+
+# Installer les dépendances
+npm install
+
+# Créer le fichier de configuration
+cp .env.example .env
+# Ouvre .env et remplis les variables (voir section 8)
+
+# Lancer en mode développement (redémarre automatiquement)
+npm run dev
+
+# Le serveur démarre sur http://localhost:5000
+# Tester : curl http://localhost:5000/api/health
+```
+
+### Lancer l'app mobile
+
+```bash
+cd mobile-app
+
+# Installer les dépendances Flutter
 flutter pub get
+
+# Vérifier que tout est OK
+flutter doctor
+
+# IMPORTANT : changer l'URL vers ton serveur local
+# Ouvre lib/config/api_config.dart
+# Commente la ligne "production" et décommente la ligne "local"
+# Remplace l'IP par celle de ton PC (voir ip addr show)
+
+# Connecte ton téléphone Android en USB (mode debug activé)
+# Ou lance un émulateur depuis Android Studio
+
+# Lancer l'application
+flutter run
+```
+
+### Lancer le dashboard admin
+
+```bash
+cd admin-web/frontend
+
+# Installer les dépendances
+npm install
+
+# Créer le fichier .env
+echo "VITE_API_URL=http://localhost:5000/api" > .env
+
+# Lancer en mode développement
+npm run dev
+# Dashboard disponible sur http://localhost:5173
 ```
 
 ---
 
-## Technologies utilisées
+## 5. Backend — API Node.js
 
-| Technologie | Version | Usage |
-|-------------|---------|-------|
-| Flutter | 3.2+ | App mobile Android |
-| Dart | 3.2+ | Langage Flutter |
-| Node.js | 18+ | Serveur backend |
-| Express | 4.22 | Framework API REST |
-| MongoDB Atlas | 8.0 | Base de données cloud |
-| Mongoose | 8.23 | ORM MongoDB |
-| Socket.io | 4.8 | Temps réel WebSocket |
-| Twilio | 5.13 | Envoi SMS OTP |
-| JWT | 9.0 | Authentification tokens |
-| React | 18 | Dashboard admin web |
-| Vite | 5 | Build tool React |
+### Structure des fichiers
+
+```
+backend/
+├── server.js                   # Point d'entrée — démarre le serveur
+├── package.json
+├── .env                        # Variables d'environnement (à créer)
+└── src/
+    ├── config/
+    │   ├── database.js         # Connexion MongoDB
+    │   ├── jwt.js              # Config tokens JWT
+    │   └── firebase.js         # Config notifications push
+    ├── models/                 # Schémas MongoDB (structure des données)
+    │   ├── User.js
+    │   ├── Etablissement.js
+    │   ├── Service.js
+    │   ├── Ticket.js
+    │   ├── File.js             # File d'attente
+    │   ├── Agent.js
+    │   └── Avis.js
+    ├── controllers/            # Logique métier (ce que fait chaque endpoint)
+    ├── routes/                 # Définition des URLs de l'API
+    ├── middleware/             # Auth JWT, rate limiting, gestion d'erreurs
+    ├── sockets/                # WebSocket temps réel (Socket.IO)
+    └── utils/                  # SMS, OTP, QR code
+```
+
+### Scripts npm
+
+```bash
+npm start      # Production (utilisé par Render)
+npm run dev    # Développement avec rechargement automatique (nodemon)
+npm test       # Tests Jest
+```
+
+### Tous les endpoints API
+
+#### Auth — `/api/auth`
+
+| Méthode | Endpoint | Description | Auth |
+|---|---|---|---|
+| POST | `/register` | Créer un compte | Non |
+| POST | `/login` | Se connecter (envoie OTP) | Non |
+| POST | `/verify-otp` | Valider le code SMS | Non |
+| POST | `/forgot-password` | Demander reset mot de passe | Non |
+| POST | `/reset-password` | Changer le mot de passe | Non |
+| POST | `/logout` | Se déconnecter | Oui |
+| GET | `/profile` | Voir son profil | Oui |
+| PUT | `/profile` | Modifier son profil | Oui |
+| POST | `/change-phone` | Changer son numéro | Oui |
+| POST | `/register-etablissement` | Enregistrer un établissement | Oui |
+| GET | `/my-etablissement` | Voir son établissement (gestionnaire) | Oui |
+
+#### Établissements — `/api/etablissements`
+
+| Méthode | Endpoint | Description | Auth |
+|---|---|---|---|
+| GET | `/` | Rechercher des établissements | Non |
+| GET | `/:id` | Détails d'un établissement | Non |
+| GET | `/:id/services` | Services d'un établissement | Non |
+| GET | `/:id/avis` | Avis d'un établissement | Non |
+| PUT | `/:id` | Modifier un établissement | Oui (gestionnaire) |
+| POST | `/:id/services` | Créer un service | Oui (gestionnaire) |
+| POST | `/:id/avis` | Laisser un avis | Oui |
+
+#### Tickets — `/api/tickets`
+
+| Méthode | Endpoint | Description | Auth |
+|---|---|---|---|
+| GET | `/mes-tickets` | Mes tickets | Oui |
+| POST | `/` | Prendre un ticket immédiat | Oui |
+| POST | `/rdv` | Prendre un RDV | Oui |
+| DELETE | `/:id/annuler` | Annuler un ticket | Oui |
+| POST | `/:id/signaler-retard` | Signaler un retard | Oui |
+| POST | `/scan/:numero/valider` | Valider présence par QR code | Oui |
+
+#### Files d'attente — `/api/files`
+
+| Méthode | Endpoint | Description | Auth |
+|---|---|---|---|
+| GET | `/:serviceId` | État de la file | Oui |
+| GET | `/:serviceId/position` | Ma position dans la file | Oui |
+| POST | `/:serviceId/appeler-suivant` | Appeler le prochain client | Oui (gestionnaire) |
+| POST | `/:serviceId/absent` | Marquer client absent | Oui (gestionnaire) |
+
+#### Admin — `/api/admin` *(token admin requis)*
+
+| Méthode | Endpoint | Description |
+|---|---|---|
+| GET | `/stats` | Statistiques globales |
+| GET | `/users` | Liste des utilisateurs |
+| PATCH | `/users/:id/statut` | Suspendre/activer un user |
+| DELETE | `/users/:id` | Supprimer un user |
+| GET | `/etablissements` | Liste des établissements |
+| PATCH | `/etablissements/:id/statut` | Activer/suspendre |
+| DELETE | `/etablissements/:id` | Supprimer |
+
+#### Santé
+
+| Méthode | Endpoint | Description |
+|---|---|---|
+| GET | `/api/health` | Vérifier que le serveur tourne |
 
 ---
 
-*WaQti v1.0.0 — Mauritanie*
+## 6. Application mobile — Flutter
+
+### Structure des fichiers
+
+```
+mobile-app/lib/
+├── main.dart                     # Point d'entrée Flutter
+├── config/
+│   ├── api_config.dart           # URL de l'API ← MODIFIER ICI
+│   └── theme.dart                # Couleurs et thème de l'app
+├── screens/
+│   ├── auth/
+│   │   ├── login_screen.dart         # Écran de connexion
+│   │   ├── register_screen.dart      # Inscription
+│   │   ├── otp_screen.dart           # Saisie du code SMS
+│   │   ├── forgot_password_screen.dart
+│   │   └── reset_password_screen.dart
+│   ├── home/
+│   │   └── home_screen.dart          # Accueil client
+│   ├── search/
+│   │   └── search_screen.dart        # Recherche d'établissements
+│   ├── ticket/
+│   │   ├── create_ticket_screen.dart  # Prendre un ticket
+│   │   ├── ticket_detail_screen.dart  # Détails du ticket
+│   │   ├── ticket_tracking_screen.dart # Suivi temps réel
+│   │   └── rdv_screen.dart            # Rendez-vous
+│   ├── profile/
+│   │   └── profile_screen.dart        # Profil + changement de langue
+│   ├── etablissement/
+│   │   ├── etablissement_detail_screen.dart
+│   │   ├── etablissement_dashboard_screen.dart
+│   │   ├── register_etablissement_screen.dart
+│   │   ├── gestion_services_screen.dart
+│   │   └── qr_scanner_screen.dart     # Scanner QR code
+│   └── gestionnaire/
+│       ├── gestionnaire_home_screen.dart
+│       ├── gestionnaire_etablissement_screen.dart
+│       ├── gestionnaire_services_screen.dart
+│       └── gestionnaire_tickets_screen.dart
+├── providers/
+│   ├── auth_provider.dart        # État global d'authentification
+│   └── locale_provider.dart      # Langue active (FR/AR)
+├── services/
+│   ├── api_service.dart          # Client HTTP (Dio) vers l'API
+│   └── socket_service.dart       # Connexion temps réel (Socket.IO)
+├── models/                       # Classes Dart pour les données
+└── l10n/
+    └── app_strings.dart          # Traductions FR/AR
+```
+
+### Changer l'URL de l'API
+
+Ouvre [mobile-app/lib/config/api_config.dart](mobile-app/lib/config/api_config.dart) :
+
+```dart
+class ApiConfig {
+  // PRODUCTION — actif par défaut
+  static const String baseUrl = 'https://waqti-app.onrender.com/api';
+
+  // LOCAL — décommente pour tester en local
+  // Trouve ton IP avec : ip addr show (Linux) ou ipconfig (Windows)
+  // static const String baseUrl = 'http://192.168.1.XXX:5000/api';
+
+  static const Duration timeout = Duration(seconds: 90);
+}
+```
+
+### Couleurs de l'application
+
+| Nom | Hex | Usage |
+|---|---|---|
+| Primary | `#2563EB` | Bleu principal, boutons, appbar |
+| Accent | `#06B6D4` | Cyan, dégradés |
+| Success | `#059669` | Vert, ticket validé |
+| Warning | `#F59E0B` | Ambre, en attente |
+| Danger | `#DC2626` | Rouge, annulé, erreur |
+| Background | `#F1F5F9` | Fond gris clair |
+
+### Langues supportées
+
+L'app supporte le **Français** et l'**Arabe (RTL)**.
+Le bouton de langue est visible sur l'écran de connexion et dans le profil.
+
+---
+
+## 7. Dashboard Admin — React
+
+### Lancer le dashboard
+
+```bash
+cd admin-web/frontend
+npm install
+npm run dev
+# Disponible sur http://localhost:5173
+```
+
+### Pages disponibles
+
+| Page | Description |
+|---|---|
+| Connexion | Login admin avec numéro de téléphone |
+| Dashboard | Stats globales, graphiques en temps réel |
+| Établissements | Liste, activation, suspension des établissements |
+| Utilisateurs | Gestion des comptes (suspendre, supprimer) |
+| Configuration | Paramètres système |
+
+### Créer un compte admin
+
+```bash
+cd backend
+node scripts/create-admin.js
+```
+
+---
+
+## 8. Variables d'environnement
+
+### Backend — `/backend/.env`
+
+```env
+# Serveur
+PORT=5000
+NODE_ENV=development          # Mettre "production" sur Render
+CORS_ORIGIN=*
+
+# MongoDB Atlas
+# Récupère l'URI depuis cloud.mongodb.com → Connect → Drivers
+MONGODB_URI=mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/waqti
+
+# JWT — mets des chaînes aléatoires longues (min 32 caractères)
+JWT_ACCESS_SECRET=mets_ici_une_cle_secrete_longue_et_aleatoire
+JWT_REFRESH_SECRET=mets_ici_une_autre_cle_secrete_differente
+
+# Infobip SMS (recommandé pour +222 Mauritanie)
+# Récupère depuis portal.infobip.com → API Keys
+INFOBIP_API_KEY=ta_cle_api_infobip
+INFOBIP_BASE_URL=xxxxx.api.infobip.com   # ton sous-domaine Infobip
+INFOBIP_SENDER=WaQti
+
+# Twilio SMS (optionnel — fallback si pas Infobip)
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxx
+TWILIO_PHONE_NUMBER=+1xxxxxxxxxx
+
+# Firebase (optionnel — pour notifications push)
+FIREBASE_PROJECT_ID=waqti-app
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk@waqti-app.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
+
+### Admin Frontend — `/admin-web/frontend/.env`
+
+```env
+VITE_API_URL=https://waqti-app.onrender.com/api
+```
+
+---
+
+## 9. Déploiement en production (Render)
+
+Le backend est déployé automatiquement depuis GitHub sur [Render.com](https://render.com).
+
+**URL de production :** `https://waqti-app.onrender.com`
+
+### Étapes de déploiement
+
+1. Push ton code sur GitHub
+2. Connecte le repo à Render (déjà configuré via `render.yaml`)
+3. Configure les variables d'environnement sur Render → **Environment**
+4. Clic **Manual Deploy** → **Deploy latest commit**
+
+### Variables à configurer sur Render
+
+| Variable | Valeur |
+|---|---|
+| `NODE_ENV` | `production` |
+| `PORT` | `10000` |
+| `MONGODB_URI` | URI MongoDB Atlas |
+| `JWT_ACCESS_SECRET` | clé secrète aléatoire |
+| `JWT_REFRESH_SECRET` | autre clé secrète |
+| `INFOBIP_API_KEY` | clé depuis portal.infobip.com |
+| `INFOBIP_BASE_URL` | sous-domaine Infobip (ex: `6z9xdz.api.infobip.com`) |
+| `INFOBIP_SENDER` | `WaQti` |
+
+### Autoriser Render dans MongoDB Atlas
+
+Render utilise des IPs dynamiques → il faut autoriser toutes les IPs :
+
+1. [cloud.mongodb.com](https://cloud.mongodb.com) → **Network Access**
+2. **+ Add IP Address** → **Allow Access from Anywhere** (`0.0.0.0/0`)
+3. **Confirm** — attends 1-2 min que le statut passe à "Active"
+
+### Redéployer après un changement
+
+```bash
+git add .
+git commit -m "description du changement"
+git push origin main
+# Render redéploie automatiquement
+```
+
+> **Plan gratuit Render** : le service dort après 15 min d'inactivité. La première requête prend 50-90 secondes pour réveiller le serveur. C'est normal.
+
+---
+
+## 10. Tester l'API
+
+### Health check — vérifier que le backend tourne
+
+```bash
+curl https://waqti-app.onrender.com/api/health
+```
+
+Réponse attendue :
+```json
+{"status": "OK", "app": "WaQti API", "version": "1.0.0"}
+```
+
+### Test complet — inscription + login
+
+```bash
+BASE="https://waqti-app.onrender.com/api"
+
+# 1. INSCRIPTION
+curl -s -X POST "$BASE/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"nom":"Mon Nom","telephone":"+22249886974","motDePasse":"Test1234","role":"client"}' \
+  | python3 -m json.tool
+# → Récupère "userId" et "devOtp" dans la réponse
+
+# 2. VÉRIFIER OTP (code reçu par SMS ou dans "devOtp")
+curl -s -X POST "$BASE/auth/verify-otp" \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"USERID_ICI","code":"OTP_ICI"}' \
+  | python3 -m json.tool
+# → Récupère "accessToken"
+
+# 3. VOIR SON PROFIL
+TOKEN="ACCESS_TOKEN_ICI"
+curl -s "$BASE/auth/profile" \
+  -H "Authorization: Bearer $TOKEN" \
+  | python3 -m json.tool
+
+# 4. CHERCHER DES ÉTABLISSEMENTS
+curl -s "$BASE/etablissements" | python3 -m json.tool
+```
+
+---
+
+## 11. Build APK Android
+
+```bash
+cd mobile-app
+
+# Vérifier que Flutter est prêt
+flutter doctor
+
+# Build release (split par architecture)
+flutter build apk --release --split-per-abi
+
+# APKs générés :
+# app-arm64-v8a-release.apk   ← téléphones modernes (envoie celui-ci)
+# app-armeabi-v7a-release.apk ← anciens téléphones ARM 32-bit
+# app-x86_64-release.apk      ← émulateurs x86
+
+# Copier pour partager
+cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ~/WaQti.apk
+echo "APK prêt : ~/WaQti.apk"
+```
+
+> Envoie `app-arm64-v8a-release.apk` à tes amis — compatible avec 95% des Android modernes.
+
+---
+
+## 12. Comment ça marche — Flux complet
+
+### Flux Client (prendre un ticket)
+
+```
+1. Ouvre l'app → écran de connexion
+2. Inscription : numéro de téléphone + mot de passe
+3. Reçoit un SMS avec code OTP à 6 chiffres
+4. Entre le code dans l'app → connexion réussie
+5. Recherche un établissement (hôpital, banque...)
+6. Choisit un service (ex: "Consultation générale")
+7. Prend un ticket virtuel → reçoit son numéro et position dans la file
+8. L'app se met à jour en temps réel via WebSocket
+9. Quand c'est son tour → notification push + SMS
+10. Se présente au guichet → gestionnaire valide via QR code
+```
+
+### Flux Gestionnaire (gérer la file)
+
+```
+1. Connexion avec compte gestionnaire
+2. Accède au dashboard de son établissement
+3. Voit la liste des tickets en attente en temps réel
+4. Appuie "Appeler suivant" → le client en tête est notifié
+5. Peut marquer un client "absent" s'il ne se présente pas
+6. Peut scanner le QR code du ticket pour valider la présence physique
+```
+
+### Flux SMS OTP
+
+```
+1. User tape son numéro → /api/auth/register ou /api/auth/login
+2. Backend génère un code à 6 chiffres (expire dans 5 min)
+3. Envoie le code via Infobip SMS au numéro
+4. User reçoit le SMS et entre le code dans l'app
+5. Backend vérifie le code → retourne accessToken + refreshToken
+6. Les tokens sont stockés dans SharedPreferences sur le téléphone
+7. Chaque requête API inclut le token : Authorization: Bearer <token>
+8. Le token expire après 1h → refreshToken utilisé automatiquement
+```
+
+### Temps réel (WebSocket)
+
+Le backend utilise **Socket.IO** pour les mises à jour en direct :
+- Un client prend un ticket → la file se met à jour pour tous
+- Le gestionnaire appelle le suivant → le client concerné est notifié
+- La position dans la file se recalcule automatiquement
+
+---
+
+## 13. Roles et permissions
+
+| Action | Client | Gestionnaire | Admin |
+|---|---|---|---|
+| S'inscrire / se connecter | ✅ | ✅ | ✅ |
+| Prendre un ticket | ✅ | — | — |
+| Voir sa position dans la file | ✅ | — | — |
+| Prendre un RDV | ✅ | — | — |
+| Laisser un avis | ✅ | — | — |
+| Gérer son établissement | — | ✅ | — |
+| Appeler le suivant | — | ✅ | — |
+| Gérer les services et guichets | — | ✅ | — |
+| Scanner QR code ticket | — | ✅ | — |
+| Voir tous les utilisateurs | — | — | ✅ |
+| Suspendre un compte | — | — | ✅ |
+| Activer un établissement | — | — | ✅ |
+| Voir les stats globales | — | — | ✅ |
+
+---
+
+## 14. Base de données — Modèles
+
+### User
+| Champ | Type | Description |
+|---|---|---|
+| `telephone` | String | Numéro unique (requis, format international) |
+| `nom` | String | Nom complet |
+| `motDePasse` | String | Haché avec bcryptjs (jamais retourné dans l'API) |
+| `role` | Enum | `client` / `gestionnaire` / `admin` |
+| `statut` | Enum | `actif` / `inactif` / `suspendu` |
+| `nni` | String | Numéro National d'Identité |
+| `otp` | Object | Code temporaire (code, expiresAt, attempts) |
+| `refreshTokens` | Array | Tokens JWT de rafraîchissement |
+| `fcmToken` | String | Token Firebase pour notifications push |
+
+### Etablissement
+| Champ | Type | Description |
+|---|---|---|
+| `nom` | String | Nom de l'établissement |
+| `type` | Enum | `hopital` / `banque` / `commune` / `prefecture` / ... |
+| `adresse` | Object | rue, ville, coordonnées GPS |
+| `telephone` | String | |
+| `responsable` | ObjectId | Référence vers le gestionnaire (User) |
+| `statut` | Enum | `pending` / `actif` / `suspendu` |
+| `horaires` | Object | Horaires d'ouverture par jour |
+| `noteMoyenne` | Number | Note moyenne des avis (0-5) |
+| `abonnement` | Object | `gratuit` / `standard` / `premium` |
+
+### Service
+| Champ | Type | Description |
+|---|---|---|
+| `nom` | String | Ex: "Consultation générale" |
+| `etablissement` | ObjectId | Référence vers l'établissement |
+| `dureeEstimee` | Number | Durée estimée par client (minutes) |
+| `guichets` | Array | Guichets avec numéro, agent assigné, statut |
+| `actif` | Boolean | Si le service accepte des tickets |
+
+### Ticket
+| Champ | Type | Description |
+|---|---|---|
+| `numero` | String | Numéro unique du ticket (ex: "T-0042") |
+| `utilisateur` | ObjectId | Référence vers le client |
+| `etablissement` | ObjectId | |
+| `service` | ObjectId | |
+| `mode` | Enum | `distance` / `rdv` / `immediate` |
+| `statut` | Enum | `waiting` / `called` / `serving` / `completed` / `cancelled` / `no_show` |
+| `position` | Number | Position dans la file (mis à jour en temps réel) |
+| `priorite` | Number | 1 (urgent) à 5 (normal) |
+| `rdv` | Object | Date et créneau si mode RDV |
+| `qrCode` | String | Données QR pour validation physique au guichet |
+
+### File (Queue)
+| Champ | Type | Description |
+|---|---|---|
+| `service` | ObjectId | Un seul par service |
+| `etablissement` | ObjectId | |
+| `tickets` | Array | Tickets en attente (ordonnés par position) |
+| `ticketEnCours` | ObjectId | Ticket actuellement en traitement |
+| `stats` | Object | Clients traités, temps moyen, taux d'abandon |
+
+---
+
+## Liens utiles
+
+- **Backend en production** : https://waqti-app.onrender.com/api/health
+- **Repo GitHub** : https://github.com/sidattBelkhair/waQti_App
+- **MongoDB Atlas** : https://cloud.mongodb.com
+- **Render Dashboard** : https://dashboard.render.com
+- **Infobip Portal** : https://portal.infobip.com
+
+---
+
+*WaQti — Mauritanie*
