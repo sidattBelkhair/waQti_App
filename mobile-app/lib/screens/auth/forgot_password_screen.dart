@@ -9,7 +9,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _State extends State<ForgotPasswordScreen> {
-  final _telCtrl = TextEditingController(text: '+222');
+  final _telCtrl = TextEditingController();
   bool _loading = false;
 
   @override

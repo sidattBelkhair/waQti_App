@@ -141,7 +141,7 @@ class _State extends State<EtablissementDetailScreen> {
           slivers: [
             // ── Header ──
             SliverAppBar(
-              expandedHeight: 210,
+              expandedHeight: 240,
               pinned: true,
               backgroundColor: WaqtiTheme.primary,
               flexibleSpace: FlexibleSpaceBar(

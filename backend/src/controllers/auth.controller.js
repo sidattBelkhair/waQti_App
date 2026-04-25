@@ -70,25 +70,38 @@ exports.login = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Compte suspendu' });
     }
 
-    const otpCode = generateOTP();
-    user.otp = {
-      code: otpCode,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-      attempts: 0,
-      lastSentAt: new Date(),
-      sendCount: (user.otp?.sendCount || 0) + 1,
-    };
-    await user.save();
+    if (user.statut === USER_STATUS.UNVERIFIED) {
+      return res.status(403).json({
+        success: false,
+        error: 'Compte non verifie. Verifiez votre telephone d\'abord.',
+        requiresVerification: true,
+        userId: user._id,
+      });
+    }
 
-    console.log('[OTP] ' + user.telephone + ': ' + otpCode);
-    await sendOTP(user.telephone, otpCode);
+    const accessToken = jwt.sign(
+      { userId: user._id, role: user.role },
+      accessTokenSecret,
+      { expiresIn: accessTokenExpiry }
+    );
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      refreshTokenSecret,
+      { expiresIn: refreshTokenExpiry }
+    );
+
+    user.refreshTokens.push({
+      token: refreshToken,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+    await user.save();
 
     res.json({
       success: true,
-      message: 'Code OTP envoye',
-      userId: user._id,
-      requiresOTP: true,
-      devOtp: otpCode,
+      message: 'Connexion reussie',
+      accessToken,
+      refreshToken,
+      user: user.toJSON(),
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -290,6 +303,57 @@ exports.resetPassword = async (req, res) => {
     await user.save();
 
     res.json({ success: true, message: 'Mot de passe mis a jour' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// POST /api/auth/create-admin (creation compte admin avec cle secrete)
+exports.createAdmin = async (req, res) => {
+  try {
+    const { nom, telephone, motDePasse, secret } = req.body;
+
+    // 1. Verifier la cle secrete (stockee uniquement en backend)
+    const adminSecret = process.env.ADMIN_CREATE_SECRET;
+    if (!adminSecret) {
+      return res.status(500).json({ success: false, error: 'ADMIN_CREATE_SECRET non configure sur le serveur' });
+    }
+    if (!secret || secret !== adminSecret) {
+      console.warn('[SECURITE] Tentative creation admin avec mauvaise cle - IP: ' + (req.ip || 'inconnue'));
+      return res.status(403).json({ success: false, error: 'Cle secrete incorrecte' });
+    }
+
+    // 2. Limiter le nombre total d'admins (max 5)
+    const adminCount = await User.countDocuments({ role: ROLES.ADMIN });
+    if (adminCount >= 5) {
+      return res.status(403).json({ success: false, error: 'Nombre maximum d\'administrateurs atteint' });
+    }
+
+    // 3. Verifier champs obligatoires
+    if (!nom || !telephone || !motDePasse) {
+      return res.status(400).json({ success: false, error: 'Nom, telephone et mot de passe requis' });
+    }
+    if (motDePasse.length < 8) {
+      return res.status(400).json({ success: false, error: 'Mot de passe minimum 8 caracteres' });
+    }
+
+    // 4. Verifier unicite telephone
+    const existing = await User.findOne({ telephone });
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Telephone deja utilise' });
+    }
+
+    const user = new User({
+      nom,
+      telephone,
+      motDePasse,
+      role: ROLES.ADMIN,
+      statut: USER_STATUS.ACTIVE,
+    });
+    await user.save();
+
+    console.log('[ADMIN] Nouveau compte admin cree: ' + telephone + ' (' + nom + ')');
+    res.status(201).json({ success: true, message: 'Compte admin cree avec succes' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

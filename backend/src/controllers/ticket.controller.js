@@ -254,10 +254,7 @@ exports.appelSuivant = async (req, res) => {
     const { serviceId } = req.params;
     const io = req.app.get('io');
 
-    const file = await File.findOne({ service: serviceId }).populate({
-      path: 'tickets',
-      populate: { path: 'utilisateur', select: 'nom telephone fcmToken' },
-    });
+    const file = await File.findOne({ service: serviceId });
 
     if (!file || file.tickets.length === 0) {
       return res.status(404).json({ success: false, error: 'File vide' });
@@ -269,12 +266,19 @@ exports.appelSuivant = async (req, res) => {
         precedent.statut = TICKET_STATUS.COMPLETED;
         precedent.finTraitement = new Date();
         await precedent.save();
-        file.stats.clientsTraites += 1;
+        if (!file.stats) file.stats = {};
+        file.stats.clientsTraites = (file.stats.clientsTraites || 0) + 1;
       }
     }
 
     const prochainId = file.tickets[0];
     const prochain = await Ticket.findById(prochainId).populate('utilisateur', 'nom telephone fcmToken');
+
+    if (!prochain) {
+      file.tickets.shift();
+      await file.save();
+      return res.status(404).json({ success: false, error: 'Ticket introuvable, file mise a jour' });
+    }
 
     prochain.statut = TICKET_STATUS.IN_PROGRESS;
     prochain.appelAt = new Date();
@@ -356,6 +360,7 @@ exports.marquerAbsent = async (req, res) => {
     await ticket.save();
 
     file.ticketEnCours = null;
+    if (!file.stats) file.stats = {};
     file.stats.clientsAbsents = (file.stats.clientsAbsents || 0) + 1;
     await file.save();
 

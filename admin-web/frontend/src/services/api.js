@@ -34,9 +34,9 @@ api.interceptors.response.use(
 
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
-  verifyOTP: (data) => api.post('/auth/verify-otp', data),
   getProfile: () => api.get('/auth/profile'),
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
+  createAdmin: (data) => api.post('/auth/create-admin', data),
 };
 
 export const etablissementAPI = {

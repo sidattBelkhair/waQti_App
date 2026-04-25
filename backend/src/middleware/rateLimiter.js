@@ -20,4 +20,13 @@ const apiLimiter = rateLimit({
   message: { success: false, error: 'Trop de requetes' },
 });
 
-module.exports = { loginLimiter, otpLimiter, apiLimiter };
+// Max 3 tentatives de creation admin par heure par IP
+const createAdminLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: { success: false, error: 'Trop de tentatives. Reessayez dans 1 heure.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { loginLimiter, otpLimiter, apiLimiter, createAdminLimiter };

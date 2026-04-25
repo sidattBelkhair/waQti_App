@@ -5,7 +5,6 @@ import '../../providers/locale_provider.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_strings.dart';
 import 'register_screen.dart';
-import 'otp_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -24,16 +23,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (tel.isEmpty || _passwordCtrl.text.isEmpty) return;
     setState(() => _loading = true);
     final auth = context.read<AuthProvider>();
-    final (userId, devOtp) = await auth.login(tel, _passwordCtrl.text);
+    final success = await auth.login(tel, _passwordCtrl.text);
     setState(() => _loading = false);
 
-    if (userId != null && mounted) {
-      Navigator.push(context, MaterialPageRoute(
-          builder: (_) => OTPScreen(userId: userId, devOtp: devOtp)));
-    } else if (auth.error != null && mounted) {
+    if (!success && auth.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(auth.error!), backgroundColor: WaqtiTheme.danger));
     }
+    // Si success, le Consumer<AuthProvider> dans main.dart rebascule automatiquement vers HomeScreen
   }
 
   @override

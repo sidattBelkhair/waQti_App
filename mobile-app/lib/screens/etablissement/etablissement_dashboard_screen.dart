@@ -100,10 +100,15 @@ class _State extends State<EtablissementDashboardScreen> {
       await _loadFile();
     } catch (e) {
       if (mounted) {
+        String msg = 'Erreur lors de l\'appel';
+        try {
+          final data = (e as dynamic).response?.data;
+          if (data is Map && data['error'] != null) {
+            msg = data['error'].toString();
+          }
+        } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(e.toString().contains('File vide')
-                ? 'La file est vide'
-                : 'Erreur : $e'),
+            content: Text(msg.contains('File vide') ? 'La file est vide' : msg),
             backgroundColor: WaqtiTheme.warning));
       }
     }

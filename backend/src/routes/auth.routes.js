@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const auth = require('../controllers/auth.controller');
 const { authenticateToken } = require('../middleware/auth.middleware');
-const { loginLimiter, otpLimiter } = require('../middleware/rateLimiter');
+const { loginLimiter, otpLimiter, createAdminLimiter } = require('../middleware/rateLimiter');
 
 // Routes publiques
 router.post('/register', auth.register);
@@ -10,6 +10,7 @@ router.post('/verify-otp', otpLimiter, auth.verifyOTP);
 router.post('/refresh-token', auth.refreshToken);
 router.post('/forgot-password', auth.forgotPassword);
 router.post('/reset-password', auth.resetPassword);
+router.post('/create-admin', createAdminLimiter, auth.createAdmin);
 
 // Routes protegees
 router.post('/logout', authenticateToken, auth.logout);

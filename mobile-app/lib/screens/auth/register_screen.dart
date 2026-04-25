@@ -11,7 +11,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nomCtrl = TextEditingController();
-  final _telCtrl = TextEditingController(text: '+222');
+  final _telCtrl = TextEditingController(text: '');
   final _mdpCtrl = TextEditingController();
   bool _loading = false;
   String _role = 'client';
@@ -54,7 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                   labelText: 'Numéro de téléphone',
-                  hintText: '+222XXXXXXXXX',
+                  hintText: 'XXXXXXXXX',
                   prefixIcon: Icon(Icons.phone_outlined, color: WaqtiTheme.primary))),
           const SizedBox(height: 16),
           TextField(

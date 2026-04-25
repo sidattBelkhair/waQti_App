@@ -22,11 +22,6 @@ export function AuthProvider({ children }) {
 
   const login = async (identifier, motDePasse) => {
     const res = await authAPI.login({ identifier, motDePasse });
-    return res.data;
-  };
-
-  const verifyOTP = async (userId, code) => {
-    const res = await authAPI.verifyOTP({ userId, code });
     localStorage.setItem('accessToken', res.data.accessToken);
     localStorage.setItem('refreshToken', res.data.refreshToken);
     setUser(res.data.user);
@@ -49,7 +44,7 @@ export function AuthProvider({ children }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, login, verifyOTP, logout }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -78,15 +78,29 @@ class _State extends State<GestionnaireServicesScreen> {
       final statuses = await Future.wait(
         svcs.map((s) => ApiService()
             .getFileStatus(s['_id'] as String)
-            .then((r) => r.data)
+            .then((r) => r.data is Map ? r.data as Map<String, dynamic> : <String, dynamic>{})
             .catchError((_) => <String, dynamic>{})),
       );
 
       final statusMap = <String, Map<String, dynamic>>{};
       for (var i = 0; i < svcs.length; i++) {
-        final fileData = statuses[i]['file'] as Map? ?? {};
-        statusMap[svcs[i]['_id'] as String] =
-            Map<String, dynamic>.from(fileData);
+        final raw = statuses[i];
+        final fileRaw = raw['file'];
+        final fileData = fileRaw is Map ? Map<String, dynamic>.from(fileRaw) : <String, dynamic>{};
+
+        // Calculer enAttente depuis le tableau tickets
+        final tickets = fileData['tickets'];
+        final enAttente = tickets is List ? tickets.length : 0;
+
+        // ticketEnCours : garder seulement si c'est un Map (objet peuplé)
+        final enCours = fileData['ticketEnCours'];
+        final enCoursMap = enCours is Map ? Map<String, dynamic>.from(enCours) : null;
+
+        statusMap[svcs[i]['_id'] as String] = {
+          ...fileData,
+          'totalEnAttente': enAttente,
+          'ticketEnCours': enCoursMap,
+        };
       }
 
       setState(() {
@@ -108,9 +122,11 @@ class _State extends State<GestionnaireServicesScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String msg = 'Erreur';
+        try { msg = (e as dynamic).response?.data?['error'] ?? 'Erreur'; } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: WaqtiTheme.danger));
+            content: Text(msg.contains('File vide') ? 'La file est vide' : msg),
+            backgroundColor: WaqtiTheme.warning));
       }
     }
   }
@@ -454,9 +470,12 @@ class _ServiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final nom = service['nom'] as String? ?? '';
     final duree = service['dureeEstimee'] as int? ?? 15;
-    final enAttente = status['totalEnAttente'] as int? ?? 0;
+    final enAttente = (status['totalEnAttente'] as int?) ?? 0;
     final enCours = status['ticketEnCours'];
-    final hasEnCours = enCours != null;
+    final enCoursMap = enCours is Map
+        ? Map<String, dynamic>.from(enCours)
+        : <String, dynamic>{};
+    final hasEnCours = enCoursMap.isNotEmpty;
 
     final queueColor = enAttente == 0
         ? WaqtiTheme.success
@@ -532,7 +551,7 @@ class _ServiceCard extends StatelessWidget {
             if (hasEnCours)
               _StatPill(
                 icon: Icons.play_circle_outline,
-                label: 'En cours: ${enCours['numero'] ?? ''}',
+                label: 'En cours: ${enCoursMap['numero'] ?? ''}',
                 color: WaqtiTheme.primary,
               ),
           ]),
@@ -554,8 +573,8 @@ class _ServiceCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${(enCours['utilisateur'] as Map?)?['nom'] ?? 'Client'} '
-                    '— Ticket ${enCours['numero'] ?? ''}',
+                    '${(enCoursMap['utilisateur'] is Map ? (enCoursMap['utilisateur'] as Map)['nom'] : null) ?? 'Client'} '
+                    '— Ticket ${enCoursMap['numero'] ?? ''}',
                     style: const TextStyle(
                         fontSize: 13,
                         color: WaqtiTheme.primary,

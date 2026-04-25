@@ -92,13 +92,47 @@ class _OTPScreenState extends State<OTPScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                _timerText,
+                _countdown > 0 ? _timerText : 'Code expiré',
                 style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: _countdown > 60 ? WaqtiTheme.primary : WaqtiTheme.warning),
               ),
             ),
+            // Bandeau code visible pour les tests (si SMS non configuré)
+            if (widget.devOtp != null) ...[
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: () {
+                  _otpCtrl.text = widget.devOtp!;
+                  setState(() {});
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFFCA28)),
+                  ),
+                  child: Column(children: [
+                    const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(Icons.bug_report_outlined, color: Color(0xFFF57F17), size: 16),
+                      SizedBox(width: 6),
+                      Text('Mode test — appuyez pour remplir',
+                          style: TextStyle(fontSize: 12, color: Color(0xFFF57F17))),
+                    ]),
+                    const SizedBox(height: 6),
+                    Text(
+                      widget.devOtp!,
+                      style: const TextStyle(
+                          fontSize: 36, fontWeight: FontWeight.bold,
+                          letterSpacing: 10, color: Color(0xFFF57F17)),
+                    ),
+                  ]),
+                ),
+              ),
+            ],
             const SizedBox(height: 32),
             TextField(
               controller: _otpCtrl,
@@ -118,7 +152,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 ),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
-                  onPressed: (_loading || _countdown <= 0) ? null : _verify,
+                  onPressed: _loading ? null : _verify,
                   child: _loading
                       ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : Text(context.tr('otp_verify')),

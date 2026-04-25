@@ -30,16 +30,21 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Retourne [userId, devOtp?] — devOtp est non-null seulement en dev
-  Future<(String?, String?)> login(String identifier, String mdp) async {
+  /// Retourne true si la connexion est reussie
+  Future<bool> login(String identifier, String mdp) async {
     try {
       _error = null;
       final res = await _api.login(identifier, mdp);
-      return (res.data['userId'] as String?, res.data['devOtp'] as String?);
+      await _api.saveTokens(res.data['accessToken'], res.data['refreshToken']);
+      _user = User.fromJson(res.data['user']);
+      SocketService().connect();
+      SocketService().joinUser(_user!.id);
+      notifyListeners();
+      return true;
     } catch (e) {
       _error = _getError(e);
       notifyListeners();
-      return (null, null);
+      return false;
     }
   }
 

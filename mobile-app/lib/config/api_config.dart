@@ -1,17 +1,17 @@
 class ApiConfig {
   // ============================================================
-  // CHANGE ICI selon l'environnement :
+  // DÉCOMMENTE la ligne selon où tu testes :
   // ============================================================
 
-  // ✅ PRODUCTION (Render) — pour partager avec tes amis
-  static const String baseUrl = 'https://waqti-app.onrender.com/api';
+  // 💻 Linux desktop (flutter run sans téléphone)
+  static const String baseUrl = 'http://localhost:5000/api';
 
-  // 🖥️  Dev local (émulateur Android)
-  // static const String baseUrl = 'http://172.20.10.2:5000/api';
+  // 📱 Téléphone Android sur même WiFi
+  // static const String baseUrl = 'http://192.168.3.78:5000/api';
 
-  // 📱 Dev local (appareil physique — remplace par ton IP WiFi)
-  // static const String baseUrl = 'http://192.168.1.XXX:5000/api';
+  // ✅ Production Render (pour APK final)
+  // static const String baseUrl = 'https://waqti-app.onrender.com/api';
 
   // ============================================================
-  static const Duration timeout = Duration(seconds: 30);
+  static const Duration timeout = Duration(seconds: 90);
 }
