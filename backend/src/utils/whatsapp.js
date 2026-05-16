@@ -117,7 +117,8 @@ const sendWhatsAppOTP = async (telephone, otpCode) => {
   }
   try {
     const digits = telephone.replace(/\D/g, '');
-    const jid = digits + '@s.whatsapp.net';
+    const fullDigits = digits.length === 8 ? '222' + digits : digits;
+    const jid = fullDigits + '@s.whatsapp.net';
     console.log('[WhatsApp] Envoi OTP -> jid:', jid);
     const message = `🕐 *WaQti*\n\nVotre code de vérification : *${otpCode}*\n\nExpire dans 5 minutes.`;
     await sock.sendMessage(jid, { text: message });

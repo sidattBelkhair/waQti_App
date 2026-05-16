@@ -270,8 +270,9 @@ exports.changePhone = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const telephone = normalizePhone(req.body.telephone);
+    const raw = req.body.telephone;
 
-    const user = await User.findOne({ telephone });
+    const user = await User.findOne({ $or: [{ telephone }, { telephone: raw }] });
     if (!user) return res.status(404).json({ success: false, error: 'Utilisateur non trouve' });
 
     const resetToken = require('crypto').randomBytes(32).toString('hex');
