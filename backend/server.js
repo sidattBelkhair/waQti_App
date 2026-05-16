@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./src/config/database');
 const errorHandler = require('./src/middleware/errorHandler');
-const { initWhatsApp, closeWhatsApp } = require('./src/utils/whatsapp');
+const { initWhatsApp, closeWhatsApp, getQRDataURL } = require('./src/utils/whatsapp');
 require('dotenv').config();
 
 const app = express();
@@ -86,6 +86,17 @@ app.post('/api/seed', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// QR WhatsApp (accessible seulement si pas encore connecte)
+app.get('/api/admin/whatsapp/qr', async (req, res) => {
+  const dataUrl = await getQRDataURL();
+  if (!dataUrl) return res.send('<h2>WhatsApp deja connecte ou QR pas encore pret. Reessaie dans 5s.</h2>');
+  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>WaQti WhatsApp QR</title>
+  <meta http-equiv="refresh" content="15"></head><body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:sans-serif">
+  <h2>Scanner avec WhatsApp</h2><p>Parametres → Appareils connectes → Connecter un appareil</p>
+  <img src="${dataUrl}" style="border:10px solid white;border-radius:8px"/><p style="color:#aaa;font-size:12px">Page rafraichie auto toutes les 15s</p>
+  </body></html>`);
 });
 
 // Route de sante

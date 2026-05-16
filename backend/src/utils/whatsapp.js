@@ -1,10 +1,12 @@
 const { default: makeWASocket, DisconnectReason, fetchLatestBaileysVersion, initAuthCreds, BufferJSON } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const WhatsappSession = require('../models/WhatsappSession');
 
 let sock = null;
 let isConnected = false;
+let currentQR = null;
 
 // Auth state stocké dans MongoDB
 const useMongoAuthState = async () => {
@@ -79,11 +81,9 @@ const initWhatsApp = async () => {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
-        console.log('\n  ============================================');
-        console.log('  [WhatsApp] Scanne ce QR avec ton WhatsApp:');
-        console.log('  ============================================\n');
+        currentQR = qr;
+        console.log('[WhatsApp] QR pret - ouvre: /api/admin/whatsapp/qr dans ton navigateur');
         qrcode.generate(qr, { small: true });
-        console.log('\n  ============================================\n');
       }
 
       if (connection === 'close') {
@@ -100,6 +100,7 @@ const initWhatsApp = async () => {
         }
       } else if (connection === 'open') {
         isConnected = true;
+        currentQR = null;
         console.log('  [WhatsApp] Connecte ! OTP envoyes via WhatsApp');
       }
     });
@@ -142,4 +143,9 @@ const closeWhatsApp = async () => {
   }
 };
 
-module.exports = { initWhatsApp, sendWhatsAppOTP, isWhatsAppConnected, closeWhatsApp };
+const getQRDataURL = async () => {
+  if (!currentQR) return null;
+  return QRCode.toDataURL(currentQR, { width: 300, margin: 2 });
+};
+
+module.exports = { initWhatsApp, sendWhatsAppOTP, isWhatsAppConnected, closeWhatsApp, getQRDataURL };
