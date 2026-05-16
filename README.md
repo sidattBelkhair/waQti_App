@@ -16,12 +16,13 @@
 6. [Application mobile — Flutter](#6-application-mobile--flutter)
 7. [Dashboard Admin — React](#7-dashboard-admin--react)
 8. [Variables d'environnement](#8-variables-denvironnement)
-9. [Déploiement en production (Render)](#9-déploiement-en-production-render)
-10. [Tester l'API](#10-tester-lapi)
-11. [Build APK Android](#11-build-apk-android)
-12. [Comment ça marche — Flux complet](#12-comment-ça-marche--flux-complet)
-13. [Roles et permissions](#13-roles-et-permissions)
-14. [Base de données — Modèles](#14-base-de-données--modèles)
+9. [Déploiement en production](#9-déploiement-en-production)
+10. [WhatsApp OTP — Configuration](#10-whatsapp-otp--configuration)
+11. [Tester l'API](#11-tester-lapi)
+12. [Build APK Android](#12-build-apk-android)
+13. [Comment ça marche — Flux complet](#13-comment-ça-marche--flux-complet)
+14. [Roles et permissions](#14-roles-et-permissions)
+15. [Base de données — Modèles](#15-base-de-données--modèles)
 
 ---
 
@@ -59,29 +60,29 @@ waQti_App/
 | Mobile App | Flutter 3, Dart, Provider, Dio, Socket.IO |
 | Admin Web | React 18, Vite, Tailwind CSS, Recharts |
 | Base de données | MongoDB Atlas (cloud) |
-| SMS OTP | Infobip (100 SMS/mois gratuits) |
-| Déploiement | Render.com (backend gratuit) |
+| **OTP** | **WhatsApp via Baileys** (gratuit, pas de SMS) |
+| Déploiement backend | Render.com |
+| Déploiement admin | Vercel |
 | Notifications Push | Firebase Cloud Messaging |
 
 ---
 
 ## 3. Prérequis
 
-Installe ces outils avant de commencer :
-
 ### Pour le backend
-- [Node.js 18+](https://nodejs.org/) → vérifie avec `node --version`
+- [Node.js 18+](https://nodejs.org/)
 - Un compte [MongoDB Atlas](https://cloud.mongodb.com) (gratuit)
+- **Un compte WhatsApp** pour envoyer les OTP (ton propre numéro suffit)
 
 ### Pour l'application mobile
-- [Flutter SDK 3.x](https://flutter.dev/docs/get-started/install) → vérifie avec `flutter --version`
+- [Flutter SDK 3.x](https://flutter.dev/docs/get-started/install)
 - Android Studio + SDK Android
-- Un téléphone Android (mode développeur activé) ou un émulateur
+- Java 17 (`org.gradle.java.home` configuré dans `gradle.properties`)
 
 ### Comptes nécessaires pour la production
-- [Render.com](https://render.com) — hébergement backend (gratuit)
+- [Render.com](https://render.com) — backend (gratuit)
+- [Vercel](https://vercel.com) — admin web (gratuit)
 - [MongoDB Atlas](https://cloud.mongodb.com) — base de données (gratuit)
-- [Infobip](https://portal.infobip.com) — SMS OTP (100 SMS/mois gratuits)
 
 ---
 
@@ -98,41 +99,20 @@ cd waQti_App
 
 ```bash
 cd backend
-
-# Installer les dépendances
 npm install
-
-# Créer le fichier de configuration
 cp .env.example .env
-# Ouvre .env et remplis les variables (voir section 8)
-
-# Lancer en mode développement (redémarre automatiquement)
+# Remplis .env (voir section 8)
 npm run dev
-
-# Le serveur démarre sur http://localhost:5000
-# Tester : curl http://localhost:5000/api/health
+# Démarre sur http://localhost:5000
 ```
+
+Au premier démarrage, le QR WhatsApp s'affiche dans le terminal. Scanne-le avec WhatsApp → la session est sauvegardée dans MongoDB.
 
 ### Lancer l'app mobile
 
 ```bash
 cd mobile-app
-
-# Installer les dépendances Flutter
 flutter pub get
-
-# Vérifier que tout est OK
-flutter doctor
-
-# IMPORTANT : changer l'URL vers ton serveur local
-# Ouvre lib/config/api_config.dart
-# Commente la ligne "production" et décommente la ligne "local"
-# Remplace l'IP par celle de ton PC (voir ip addr show)
-
-# Connecte ton téléphone Android en USB (mode debug activé)
-# Ou lance un émulateur depuis Android Studio
-
-# Lancer l'application
 flutter run
 ```
 
@@ -140,16 +120,10 @@ flutter run
 
 ```bash
 cd admin-web/frontend
-
-# Installer les dépendances
 npm install
-
-# Créer le fichier .env
 echo "VITE_API_URL=http://localhost:5000/api" > .env
-
-# Lancer en mode développement
 npm run dev
-# Dashboard disponible sur http://localhost:5173
+# Disponible sur http://localhost:5173
 ```
 
 ---
@@ -160,86 +134,68 @@ npm run dev
 
 ```
 backend/
-├── server.js                   # Point d'entrée — démarre le serveur
-├── package.json
-├── .env                        # Variables d'environnement (à créer)
+├── server.js
 └── src/
     ├── config/
-    │   ├── database.js         # Connexion MongoDB
-    │   ├── jwt.js              # Config tokens JWT
-    │   └── firebase.js         # Config notifications push
-    ├── models/                 # Schémas MongoDB (structure des données)
+    │   ├── database.js
+    │   └── jwt.js
+    ├── models/
     │   ├── User.js
     │   ├── Etablissement.js
     │   ├── Service.js
     │   ├── Ticket.js
-    │   ├── File.js             # File d'attente
-    │   ├── Agent.js
-    │   └── Avis.js
-    ├── controllers/            # Logique métier (ce que fait chaque endpoint)
-    ├── routes/                 # Définition des URLs de l'API
-    ├── middleware/             # Auth JWT, rate limiting, gestion d'erreurs
-    ├── sockets/                # WebSocket temps réel (Socket.IO)
-    └── utils/                  # SMS, OTP, QR code
+    │   ├── File.js
+    │   └── WhatsappSession.js    ← Session WhatsApp persistée en MongoDB
+    ├── controllers/
+    ├── routes/
+    ├── middleware/
+    ├── sockets/
+    └── utils/
+        ├── whatsapp.js           ← Connexion WhatsApp via Baileys
+        ├── sms.js                ← Envoi OTP (WhatsApp ou console fallback)
+        └── otp.js                ← Génération code OTP 6 chiffres
 ```
 
-### Scripts npm
-
-```bash
-npm start      # Production (utilisé par Render)
-npm run dev    # Développement avec rechargement automatique (nodemon)
-npm test       # Tests Jest
-```
-
-### Tous les endpoints API
+### Endpoints API
 
 #### Auth — `/api/auth`
 
-| Méthode | Endpoint | Description | Auth |
-|---|---|---|---|
-| POST | `/register` | Créer un compte | Non |
-| POST | `/login` | Se connecter (envoie OTP) | Non |
-| POST | `/verify-otp` | Valider le code SMS | Non |
-| POST | `/forgot-password` | Demander reset mot de passe | Non |
-| POST | `/reset-password` | Changer le mot de passe | Non |
-| POST | `/logout` | Se déconnecter | Oui |
-| GET | `/profile` | Voir son profil | Oui |
-| PUT | `/profile` | Modifier son profil | Oui |
-| POST | `/change-phone` | Changer son numéro | Oui |
-| POST | `/register-etablissement` | Enregistrer un établissement | Oui |
-| GET | `/my-etablissement` | Voir son établissement (gestionnaire) | Oui |
+| Méthode | Endpoint | Description |
+|---|---|---|
+| POST | `/register` | Créer un compte → envoie OTP WhatsApp |
+| POST | `/login` | Se connecter |
+| POST | `/verify-otp` | Valider le code OTP |
+| POST | `/forgot-password` | Reset mot de passe → envoie code WhatsApp |
+| POST | `/reset-password` | Changer le mot de passe avec le code reçu |
+| POST | `/logout` | Se déconnecter |
+| GET | `/profile` | Voir son profil |
+| PUT | `/profile` | Modifier son profil |
 
 #### Établissements — `/api/etablissements`
 
-| Méthode | Endpoint | Description | Auth |
-|---|---|---|---|
-| GET | `/` | Rechercher des établissements | Non |
-| GET | `/:id` | Détails d'un établissement | Non |
-| GET | `/:id/services` | Services d'un établissement | Non |
-| GET | `/:id/avis` | Avis d'un établissement | Non |
-| PUT | `/:id` | Modifier un établissement | Oui (gestionnaire) |
-| POST | `/:id/services` | Créer un service | Oui (gestionnaire) |
-| POST | `/:id/avis` | Laisser un avis | Oui |
+| Méthode | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Rechercher des établissements |
+| GET | `/:id` | Détails d'un établissement |
+| GET | `/:id/services` | Services d'un établissement |
+| PUT | `/:id` | Modifier (gestionnaire) |
+| POST | `/:id/services` | Créer un service |
 
 #### Tickets — `/api/tickets`
 
-| Méthode | Endpoint | Description | Auth |
-|---|---|---|---|
-| GET | `/mes-tickets` | Mes tickets | Oui |
-| POST | `/` | Prendre un ticket immédiat | Oui |
-| POST | `/rdv` | Prendre un RDV | Oui |
-| DELETE | `/:id/annuler` | Annuler un ticket | Oui |
-| POST | `/:id/signaler-retard` | Signaler un retard | Oui |
-| POST | `/scan/:numero/valider` | Valider présence par QR code | Oui |
+| Méthode | Endpoint | Description |
+|---|---|---|
+| GET | `/mes-tickets` | Mes tickets |
+| POST | `/` | Prendre un ticket immédiat |
+| POST | `/rdv` | Prendre un RDV |
+| DELETE | `/:id/annuler` | Annuler un ticket |
 
 #### Files d'attente — `/api/files`
 
-| Méthode | Endpoint | Description | Auth |
-|---|---|---|---|
-| GET | `/:serviceId` | État de la file | Oui |
-| GET | `/:serviceId/position` | Ma position dans la file | Oui |
-| POST | `/:serviceId/appeler-suivant` | Appeler le prochain client | Oui (gestionnaire) |
-| POST | `/:serviceId/absent` | Marquer client absent | Oui (gestionnaire) |
+| Méthode | Endpoint | Description |
+|---|---|---|
+| GET | `/:serviceId` | État de la file |
+| POST | `/:serviceId/appeler-suivant` | Appeler le prochain (gestionnaire) |
 
 #### Admin — `/api/admin` *(token admin requis)*
 
@@ -247,69 +203,19 @@ npm test       # Tests Jest
 |---|---|---|
 | GET | `/stats` | Statistiques globales |
 | GET | `/users` | Liste des utilisateurs |
-| PATCH | `/users/:id/statut` | Suspendre/activer un user |
-| DELETE | `/users/:id` | Supprimer un user |
+| PATCH | `/users/:id/statut` | Suspendre/activer |
 | GET | `/etablissements` | Liste des établissements |
-| PATCH | `/etablissements/:id/statut` | Activer/suspendre |
-| DELETE | `/etablissements/:id` | Supprimer |
 
-#### Santé
+#### WhatsApp & Santé
 
 | Méthode | Endpoint | Description |
 |---|---|---|
+| GET | `/api/whatsapp/qr` | **QR code WhatsApp** (image dans navigateur) |
 | GET | `/api/health` | Vérifier que le serveur tourne |
 
 ---
 
 ## 6. Application mobile — Flutter
-
-### Structure des fichiers
-
-```
-mobile-app/lib/
-├── main.dart                     # Point d'entrée Flutter
-├── config/
-│   ├── api_config.dart           # URL de l'API ← MODIFIER ICI
-│   └── theme.dart                # Couleurs et thème de l'app
-├── screens/
-│   ├── auth/
-│   │   ├── login_screen.dart         # Écran de connexion
-│   │   ├── register_screen.dart      # Inscription
-│   │   ├── otp_screen.dart           # Saisie du code SMS
-│   │   ├── forgot_password_screen.dart
-│   │   └── reset_password_screen.dart
-│   ├── home/
-│   │   └── home_screen.dart          # Accueil client
-│   ├── search/
-│   │   └── search_screen.dart        # Recherche d'établissements
-│   ├── ticket/
-│   │   ├── create_ticket_screen.dart  # Prendre un ticket
-│   │   ├── ticket_detail_screen.dart  # Détails du ticket
-│   │   ├── ticket_tracking_screen.dart # Suivi temps réel
-│   │   └── rdv_screen.dart            # Rendez-vous
-│   ├── profile/
-│   │   └── profile_screen.dart        # Profil + changement de langue
-│   ├── etablissement/
-│   │   ├── etablissement_detail_screen.dart
-│   │   ├── etablissement_dashboard_screen.dart
-│   │   ├── register_etablissement_screen.dart
-│   │   ├── gestion_services_screen.dart
-│   │   └── qr_scanner_screen.dart     # Scanner QR code
-│   └── gestionnaire/
-│       ├── gestionnaire_home_screen.dart
-│       ├── gestionnaire_etablissement_screen.dart
-│       ├── gestionnaire_services_screen.dart
-│       └── gestionnaire_tickets_screen.dart
-├── providers/
-│   ├── auth_provider.dart        # État global d'authentification
-│   └── locale_provider.dart      # Langue active (FR/AR)
-├── services/
-│   ├── api_service.dart          # Client HTTP (Dio) vers l'API
-│   └── socket_service.dart       # Connexion temps réel (Socket.IO)
-├── models/                       # Classes Dart pour les données
-└── l10n/
-    └── app_strings.dart          # Traductions FR/AR
-```
 
 ### Changer l'URL de l'API
 
@@ -317,62 +223,42 @@ Ouvre [mobile-app/lib/config/api_config.dart](mobile-app/lib/config/api_config.d
 
 ```dart
 class ApiConfig {
-  // PRODUCTION — actif par défaut
+  // PRODUCTION
   static const String baseUrl = 'https://waqti-app.onrender.com/api';
 
-  // LOCAL — décommente pour tester en local
-  // Trouve ton IP avec : ip addr show (Linux) ou ipconfig (Windows)
-  // static const String baseUrl = 'http://192.168.1.XXX:5000/api';
-
-  static const Duration timeout = Duration(seconds: 90);
+  // LOCAL (décommente pour tester en local)
+  // static const String baseUrl = 'http://192.168.X.X:5000/api';
 }
 ```
 
-### Couleurs de l'application
+### Numéros de téléphone
 
-| Nom | Hex | Usage |
-|---|---|---|
-| Primary | `#2563EB` | Bleu principal, boutons, appbar |
-| Accent | `#06B6D4` | Cyan, dégradés |
-| Success | `#059669` | Vert, ticket validé |
-| Warning | `#F59E0B` | Ambre, en attente |
-| Danger | `#DC2626` | Rouge, annulé, erreur |
-| Background | `#F1F5F9` | Fond gris clair |
+L'app accepte les numéros mauritaniens en format court (`XXXXXXXX`) ou complet (`+222XXXXXXXX`). Le backend normalise automatiquement vers `+222XXXXXXXX`.
 
 ### Langues supportées
 
 L'app supporte le **Français** et l'**Arabe (RTL)**.
-Le bouton de langue est visible sur l'écran de connexion et dans le profil.
 
 ---
 
 ## 7. Dashboard Admin — React
 
-### Lancer le dashboard
+**URL production :** `https://wa-qti-app.vercel.app`
 
-```bash
-cd admin-web/frontend
-npm install
-npm run dev
-# Disponible sur http://localhost:5173
-```
+### Créer un compte admin (première fois)
 
-### Pages disponibles
+1. Va sur `https://wa-qti-app.vercel.app/login`
+2. Clique sur l'onglet **"Créer admin"**
+3. Remplis :
+   - Nom complet
+   - Téléphone (ex: `41585215`)
+   - Mot de passe (min 8 caractères)
+   - Clé secrète admin : `SIDATTBELKHAIR_WAQTI`
+4. Clique **"Créer le compte admin"**
 
-| Page | Description |
-|---|---|
-| Connexion | Login admin avec numéro de téléphone |
-| Dashboard | Stats globales, graphiques en temps réel |
-| Établissements | Liste, activation, suspension des établissements |
-| Utilisateurs | Gestion des comptes (suspendre, supprimer) |
-| Configuration | Paramètres système |
+### Se connecter
 
-### Créer un compte admin
-
-```bash
-cd backend
-node scripts/create-admin.js
-```
+Onglet **Connexion** → Téléphone + Mot de passe choisi lors de la création.
 
 ---
 
@@ -381,35 +267,27 @@ node scripts/create-admin.js
 ### Backend — `/backend/.env`
 
 ```env
-# Serveur
 PORT=5000
-NODE_ENV=development          # Mettre "production" sur Render
+NODE_ENV=development
 CORS_ORIGIN=*
 
 # MongoDB Atlas
-# Récupère l'URI depuis cloud.mongodb.com → Connect → Drivers
-MONGODB_URI=mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/waqti
+MONGODB_URI=mongodb+srv://USER:PASS@cluster.mongodb.net/waqti
 
-# JWT — mets des chaînes aléatoires longues (min 32 caractères)
-JWT_ACCESS_SECRET=mets_ici_une_cle_secrete_longue_et_aleatoire
-JWT_REFRESH_SECRET=mets_ici_une_autre_cle_secrete_differente
+# JWT
+JWT_ACCESS_SECRET=cle_secrete_longue_et_aleatoire
+JWT_REFRESH_SECRET=autre_cle_secrete_differente
 
-# Infobip SMS (recommandé pour +222 Mauritanie)
-# Récupère depuis portal.infobip.com → API Keys
-INFOBIP_API_KEY=ta_cle_api_infobip
-INFOBIP_BASE_URL=xxxxx.api.infobip.com   # ton sous-domaine Infobip
-INFOBIP_SENDER=WaQti
+# Sécurité admin
+ADMIN_CREATE_SECRET=SIDATTBELKHAIR_WAQTI
 
-# Twilio SMS (optionnel — fallback si pas Infobip)
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxx
-TWILIO_PHONE_NUMBER=+1xxxxxxxxxx
-
-# Firebase (optionnel — pour notifications push)
+# Firebase (optionnel — notifications push)
 FIREBASE_PROJECT_ID=waqti-app
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk@waqti-app.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_PRIVATE_KEY=your_key
 ```
+
+> **Note** : Pas de clé SMS/Twilio/Infobip — les OTP sont envoyés par **WhatsApp gratuitement**.
 
 ### Admin Frontend — `/admin-web/frontend/.env`
 
@@ -419,173 +297,170 @@ VITE_API_URL=https://waqti-app.onrender.com/api
 
 ---
 
-## 9. Déploiement en production (Render)
+## 9. Déploiement en production
 
-Le backend est déployé automatiquement depuis GitHub sur [Render.com](https://render.com).
+### Backend → Render.com
 
-**URL de production :** `https://waqti-app.onrender.com`
-
-### Étapes de déploiement
-
-1. Push ton code sur GitHub
-2. Connecte le repo à Render (déjà configuré via `render.yaml`)
-3. Configure les variables d'environnement sur Render → **Environment**
-4. Clic **Manual Deploy** → **Deploy latest commit**
-
-### Variables à configurer sur Render
-
-| Variable | Valeur |
-|---|---|
-| `NODE_ENV` | `production` |
-| `PORT` | `10000` |
-| `MONGODB_URI` | URI MongoDB Atlas |
-| `JWT_ACCESS_SECRET` | clé secrète aléatoire |
-| `JWT_REFRESH_SECRET` | autre clé secrète |
-| `INFOBIP_API_KEY` | clé depuis portal.infobip.com |
-| `INFOBIP_BASE_URL` | sous-domaine Infobip (ex: `6z9xdz.api.infobip.com`) |
-| `INFOBIP_SENDER` | `WaQti` |
-
-### Autoriser Render dans MongoDB Atlas
-
-Render utilise des IPs dynamiques → il faut autoriser toutes les IPs :
-
-1. [cloud.mongodb.com](https://cloud.mongodb.com) → **Network Access**
-2. **+ Add IP Address** → **Allow Access from Anywhere** (`0.0.0.0/0`)
-3. **Confirm** — attends 1-2 min que le statut passe à "Active"
-
-### Redéployer après un changement
+**URL :** `https://waqti-app.onrender.com`
 
 ```bash
-git add .
-git commit -m "description du changement"
 git push origin main
 # Render redéploie automatiquement
 ```
 
-> **Plan gratuit Render** : le service dort après 15 min d'inactivité. La première requête prend 50-90 secondes pour réveiller le serveur. C'est normal.
+Variables à configurer dans Render → **Environment** :
+
+| Variable | Valeur |
+|---|---|
+| `NODE_ENV` | `production` |
+| `MONGODB_URI` | URI MongoDB Atlas |
+| `JWT_ACCESS_SECRET` | clé aléatoire |
+| `JWT_REFRESH_SECRET` | autre clé |
+| `ADMIN_CREATE_SECRET` | `SIDATTBELKHAIR_WAQTI` |
+
+### Admin Web → Vercel
+
+**URL :** `https://wa-qti-app.vercel.app`
+
+Déploiement automatique depuis GitHub. Variable à configurer :
+
+| Variable | Valeur |
+|---|---|
+| `VITE_API_URL` | `https://waqti-app.onrender.com/api` |
+
+### MongoDB Atlas — Autoriser toutes les IPs
+
+cloud.mongodb.com → **Network Access** → **+ Add IP Address** → `0.0.0.0/0`
 
 ---
 
-## 10. Tester l'API
+## 10. WhatsApp OTP — Configuration
 
-### Health check — vérifier que le backend tourne
+WaQti utilise **Baileys** (WhatsApp Web API) pour envoyer les codes OTP via WhatsApp — **gratuit, sans quota**.
 
-```bash
-curl https://waqti-app.onrender.com/api/health
+### Comment ça marche
+
+```
+1. Render démarre → charge la session WhatsApp depuis MongoDB
+2. Si pas de session → génère un QR code
+3. Tu scannes le QR avec ton WhatsApp → session active
+4. Session sauvegardée dans MongoDB → survit aux redémarrages
+5. Quand un user s'inscrit → OTP envoyé via WhatsApp au format :
+   🕐 WaQti — Votre code : 847291 — Expire dans 5 min
 ```
 
-Réponse attendue :
-```json
-{"status": "OK", "app": "WaQti API", "version": "1.0.0"}
+### Scanner le QR (première fois ou après déconnexion)
+
+1. Ouvre dans le navigateur : `https://waqti-app.onrender.com/api/whatsapp/qr`
+2. Scanne le QR avec ton WhatsApp (Paramètres → Appareils connectés → Connecter un appareil)
+3. La page se rafraîchit automatiquement toutes les 15s
+4. Une fois connecté, la page affiche "WhatsApp déjà connecté"
+
+### Vérifier l'état de connexion
+
+Dans les logs Render, tu verras :
+```
+[WhatsApp] Connecte ! OTP envoyes via WhatsApp   ← OK
+[WhatsApp] QR pret - ouvre: /api/whatsapp/qr     ← À scanner
+[WhatsApp] Session expiree - suppression...       ← Disconnect, nouveau QR auto
 ```
 
-### Test complet — inscription + login
+### Format des numéros
+
+Le backend accepte et normalise automatiquement :
+- `49484602` → `+22249484602`
+- `+22249484602` → `+22249484602`
+
+### Si WhatsApp n'est pas connecté
+
+L'OTP s'affiche dans les logs Render (console fallback) et une case "Mode test" apparaît dans l'app pour permettre les tests sans WhatsApp.
+
+---
+
+## 11. Tester l'API
 
 ```bash
 BASE="https://waqti-app.onrender.com/api"
 
-# 1. INSCRIPTION
+# Health check
+curl $BASE/health
+
+# Inscription (OTP envoyé sur WhatsApp)
 curl -s -X POST "$BASE/auth/register" \
   -H "Content-Type: application/json" \
-  -d '{"nom":"Mon Nom","telephone":"+22249886974","motDePasse":"Test1234","role":"client"}' \
-  | python3 -m json.tool
-# → Récupère "userId" et "devOtp" dans la réponse
+  -d '{"nom":"Test","telephone":"41585215","motDePasse":"Test@1234","role":"client"}'
 
-# 2. VÉRIFIER OTP (code reçu par SMS ou dans "devOtp")
+# Vérifier OTP
 curl -s -X POST "$BASE/auth/verify-otp" \
   -H "Content-Type: application/json" \
-  -d '{"userId":"USERID_ICI","code":"OTP_ICI"}' \
-  | python3 -m json.tool
-# → Récupère "accessToken"
+  -d '{"userId":"USERID_ICI","code":"CODE_WHATSAPP"}'
 
-# 3. VOIR SON PROFIL
-TOKEN="ACCESS_TOKEN_ICI"
-curl -s "$BASE/auth/profile" \
-  -H "Authorization: Bearer $TOKEN" \
-  | python3 -m json.tool
-
-# 4. CHERCHER DES ÉTABLISSEMENTS
-curl -s "$BASE/etablissements" | python3 -m json.tool
+# Lister les établissements
+curl -s "$BASE/etablissements"
 ```
 
 ---
 
-## 11. Build APK Android
+## 12. Build APK Android
 
 ```bash
 cd mobile-app
 
-# Vérifier que Flutter est prêt
-flutter doctor
-
-# Build release (split par architecture)
+# S'assurer que Java 17 est utilisé (gradle.properties déjà configuré)
 flutter build apk --release --split-per-abi
 
-# APKs générés :
-# app-arm64-v8a-release.apk   ← téléphones modernes (envoie celui-ci)
-# app-armeabi-v7a-release.apk ← anciens téléphones ARM 32-bit
-# app-x86_64-release.apk      ← émulateurs x86
-
-# Copier pour partager
+# APK à envoyer : app-arm64-v8a-release.apk
 cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ~/WaQti.apk
-echo "APK prêt : ~/WaQti.apk"
 ```
 
-> Envoie `app-arm64-v8a-release.apk` à tes amis — compatible avec 95% des Android modernes.
+> **Note Java** : Le fichier `android/gradle.properties` contient `org.gradle.java.home=/usr/lib/jvm/java-17-openjdk` pour éviter les conflits avec Java 21 (Android Studio JBR).
 
 ---
 
-## 12. Comment ça marche — Flux complet
+## 13. Comment ça marche — Flux complet
+
+### Flux OTP WhatsApp
+
+```
+1. User entre son numéro → /api/auth/register
+2. Backend normalise le numéro : 49484602 → +22249484602
+3. Génère code OTP 6 chiffres (expire dans 5 min)
+4. Envoie via WhatsApp Baileys :
+   🕐 WaQti — Votre code de vérification : 847291 — Expire dans 5 minutes.
+5. User reçoit le message WhatsApp et entre le code dans l'app
+6. Backend vérifie → retourne accessToken + refreshToken
+7. Tokens stockés dans SharedPreferences sur le téléphone
+```
 
 ### Flux Client (prendre un ticket)
 
 ```
-1. Ouvre l'app → écran de connexion
-2. Inscription : numéro de téléphone + mot de passe
-3. Reçoit un SMS avec code OTP à 6 chiffres
-4. Entre le code dans l'app → connexion réussie
-5. Recherche un établissement (hôpital, banque...)
-6. Choisit un service (ex: "Consultation générale")
-7. Prend un ticket virtuel → reçoit son numéro et position dans la file
-8. L'app se met à jour en temps réel via WebSocket
-9. Quand c'est son tour → notification push + SMS
-10. Se présente au guichet → gestionnaire valide via QR code
+1. Inscription → OTP WhatsApp → connexion
+2. Recherche un établissement
+3. Choisit un service
+4. Prend un ticket virtuel → position dans la file
+5. Suivi temps réel via WebSocket
+6. Notification quand c'est son tour
 ```
 
-### Flux Gestionnaire (gérer la file)
+### Flux Gestionnaire
 
 ```
 1. Connexion avec compte gestionnaire
-2. Accède au dashboard de son établissement
-3. Voit la liste des tickets en attente en temps réel
-4. Appuie "Appeler suivant" → le client en tête est notifié
-5. Peut marquer un client "absent" s'il ne se présente pas
-6. Peut scanner le QR code du ticket pour valider la présence physique
-```
-
-### Flux SMS OTP
-
-```
-1. User tape son numéro → /api/auth/register ou /api/auth/login
-2. Backend génère un code à 6 chiffres (expire dans 5 min)
-3. Envoie le code via Infobip SMS au numéro
-4. User reçoit le SMS et entre le code dans l'app
-5. Backend vérifie le code → retourne accessToken + refreshToken
-6. Les tokens sont stockés dans SharedPreferences sur le téléphone
-7. Chaque requête API inclut le token : Authorization: Bearer <token>
-8. Le token expire après 1h → refreshToken utilisé automatiquement
+2. Dashboard de son établissement en temps réel
+3. "Appeler suivant" → client notifié
+4. Scanner QR code du ticket pour valider la présence
 ```
 
 ### Temps réel (WebSocket)
 
-Le backend utilise **Socket.IO** pour les mises à jour en direct :
-- Un client prend un ticket → la file se met à jour pour tous
-- Le gestionnaire appelle le suivant → le client concerné est notifié
-- La position dans la file se recalcule automatiquement
+Socket.IO gère les mises à jour en direct :
+- Ticket pris → file mise à jour pour tous
+- Gestionnaire appelle le suivant → client notifié instantanément
 
 ---
 
-## 13. Roles et permissions
+## 14. Roles et permissions
 
 | Action | Client | Gestionnaire | Admin |
 |---|---|---|---|
@@ -596,7 +471,6 @@ Le backend utilise **Socket.IO** pour les mises à jour en direct :
 | Laisser un avis | ✅ | — | — |
 | Gérer son établissement | — | ✅ | — |
 | Appeler le suivant | — | ✅ | — |
-| Gérer les services et guichets | — | ✅ | — |
 | Scanner QR code ticket | — | ✅ | — |
 | Voir tous les utilisateurs | — | — | ✅ |
 | Suspendre un compte | — | — | ✅ |
@@ -605,76 +479,45 @@ Le backend utilise **Socket.IO** pour les mises à jour en direct :
 
 ---
 
-## 14. Base de données — Modèles
+## 15. Base de données — Modèles
 
 ### User
 | Champ | Type | Description |
 |---|---|---|
-| `telephone` | String | Numéro unique (requis, format international) |
+| `telephone` | String | Format `+222XXXXXXXX` (normalisé automatiquement) |
 | `nom` | String | Nom complet |
-| `motDePasse` | String | Haché avec bcryptjs (jamais retourné dans l'API) |
+| `motDePasse` | String | Haché avec bcryptjs |
 | `role` | Enum | `client` / `gestionnaire` / `admin` |
 | `statut` | Enum | `actif` / `inactif` / `suspendu` |
-| `nni` | String | Numéro National d'Identité |
 | `otp` | Object | Code temporaire (code, expiresAt, attempts) |
-| `refreshTokens` | Array | Tokens JWT de rafraîchissement |
-| `fcmToken` | String | Token Firebase pour notifications push |
+| `refreshTokens` | Array | Tokens JWT |
 
-### Etablissement
+### WhatsappSession *(nouveau)*
 | Champ | Type | Description |
 |---|---|---|
-| `nom` | String | Nom de l'établissement |
-| `type` | Enum | `hopital` / `banque` / `commune` / `prefecture` / ... |
-| `adresse` | Object | rue, ville, coordonnées GPS |
-| `telephone` | String | |
-| `responsable` | ObjectId | Référence vers le gestionnaire (User) |
-| `statut` | Enum | `pending` / `actif` / `suspendu` |
-| `horaires` | Object | Horaires d'ouverture par jour |
-| `noteMoyenne` | Number | Note moyenne des avis (0-5) |
-| `abonnement` | Object | `gratuit` / `standard` / `premium` |
-
-### Service
-| Champ | Type | Description |
-|---|---|---|
-| `nom` | String | Ex: "Consultation générale" |
-| `etablissement` | ObjectId | Référence vers l'établissement |
-| `dureeEstimee` | Number | Durée estimée par client (minutes) |
-| `guichets` | Array | Guichets avec numéro, agent assigné, statut |
-| `actif` | Boolean | Si le service accepte des tickets |
+| `_id` | String | `"main"` (une seule session) |
+| `data` | Object | Clés de chiffrement Baileys (creds + keys) |
+| `updatedAt` | Date | Dernière mise à jour automatique |
 
 ### Ticket
 | Champ | Type | Description |
 |---|---|---|
-| `numero` | String | Numéro unique du ticket (ex: "T-0042") |
-| `utilisateur` | ObjectId | Référence vers le client |
-| `etablissement` | ObjectId | |
-| `service` | ObjectId | |
-| `mode` | Enum | `distance` / `rdv` / `immediate` |
-| `statut` | Enum | `waiting` / `called` / `serving` / `completed` / `cancelled` / `no_show` |
-| `position` | Number | Position dans la file (mis à jour en temps réel) |
-| `priorite` | Number | 1 (urgent) à 5 (normal) |
-| `rdv` | Object | Date et créneau si mode RDV |
-| `qrCode` | String | Données QR pour validation physique au guichet |
-
-### File (Queue)
-| Champ | Type | Description |
-|---|---|---|
-| `service` | ObjectId | Un seul par service |
-| `etablissement` | ObjectId | |
-| `tickets` | Array | Tickets en attente (ordonnés par position) |
-| `ticketEnCours` | ObjectId | Ticket actuellement en traitement |
-| `stats` | Object | Clients traités, temps moyen, taux d'abandon |
+| `numero` | String | Ex: "T-0042" |
+| `statut` | Enum | `waiting` / `called` / `serving` / `completed` / `cancelled` |
+| `position` | Number | Position en temps réel |
+| `qrCode` | String | Pour validation physique au guichet |
 
 ---
 
 ## Liens utiles
 
-- **Backend en production** : https://waqti-app.onrender.com/api/health
-- **Repo GitHub** : https://github.com/sidattBelkhair/waQti_App
+- **Backend** : https://waqti-app.onrender.com/api/health
+- **Admin Web** : https://wa-qti-app.vercel.app
+- **QR WhatsApp** : https://waqti-app.onrender.com/api/whatsapp/qr
+- **GitHub** : https://github.com/sidattBelkhair/waQti_App
 - **MongoDB Atlas** : https://cloud.mongodb.com
 - **Render Dashboard** : https://dashboard.render.com
-- **Infobip Portal** : https://portal.infobip.com
 
 ---
 
-*WaQti — Mauritanie*
+*WaQti — Mauritanie 🇲🇷*
