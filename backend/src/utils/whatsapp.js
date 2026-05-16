@@ -1,4 +1,4 @@
-const { default: makeWASocket, DisconnectReason, fetchLatestBaileysVersion, initAuthCreds, BufferJSON, proto } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, DisconnectReason, fetchLatestBaileysVersion, initAuthCreds, BufferJSON } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const WhatsappSession = require('../models/WhatsappSession');
@@ -110,9 +110,14 @@ const initWhatsApp = async () => {
 };
 
 const sendWhatsAppOTP = async (telephone, otpCode) => {
-  if (!sock || !isConnected) return false;
+  if (!sock || !isConnected) {
+    console.log('[WhatsApp] Non connecte - fallback console');
+    return false;
+  }
   try {
-    const jid = telephone.replace(/\D/g, '') + '@s.whatsapp.net';
+    const digits = telephone.replace(/\D/g, '');
+    const jid = digits + '@s.whatsapp.net';
+    console.log('[WhatsApp] Envoi OTP -> jid:', jid);
     const message = `🕐 *WaQti*\n\nVotre code de vérification : *${otpCode}*\n\nExpire dans 5 minutes.`;
     await sock.sendMessage(jid, { text: message });
     console.log('[WhatsApp] OTP envoye a ' + telephone);

@@ -40,13 +40,14 @@ exports.register = async (req, res) => {
 
     console.log('[OTP] ' + telephone + ': ' + otpCode);
     const smsSent = await sendOTP(telephone, otpCode);
-    console.log('[OTP] SMS sent:', smsSent ? 'oui' : 'non (check Infobip logs)');
+    const whatsappOk = smsSent && smsSent.method === 'whatsapp' && smsSent.success;
+    console.log('[OTP] Envoi:', whatsappOk ? 'WhatsApp OK' : 'console fallback');
 
     res.status(201).json({
       success: true,
       message: 'Compte cree. Verifiez votre telephone pour le code OTP.',
       userId: user._id,
-      devOtp: otpCode,
+      devOtp: whatsappOk ? undefined : otpCode,
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
