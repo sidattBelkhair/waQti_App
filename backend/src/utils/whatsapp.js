@@ -90,7 +90,8 @@ const initWhatsApp = async () => {
         isConnected = false;
         const code = lastDisconnect?.error?.output?.statusCode;
         if (code === DisconnectReason.loggedOut) {
-          console.log('[WhatsApp] Session expiree - scanne le QR a nouveau');
+          console.log('[WhatsApp] Session expiree - suppression et nouveau QR...');
+          WhatsappSession.findByIdAndDelete('main').catch(() => {}).finally(() => setTimeout(initWhatsApp, 3000));
         } else if (code === DisconnectReason.connectionReplaced) {
           console.log('[WhatsApp] Session utilisee ailleurs - cette instance cede la place');
         } else {
