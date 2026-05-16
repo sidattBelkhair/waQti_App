@@ -89,12 +89,13 @@ const initWhatsApp = async () => {
       if (connection === 'close') {
         isConnected = false;
         const code = lastDisconnect?.error?.output?.statusCode;
-        const shouldReconnect = code !== DisconnectReason.loggedOut;
-        if (shouldReconnect) {
-          console.log('[WhatsApp] Reconnexion...');
-          setTimeout(initWhatsApp, 5000);
-        } else {
+        if (code === DisconnectReason.loggedOut) {
           console.log('[WhatsApp] Session expiree - scanne le QR a nouveau');
+        } else if (code === DisconnectReason.connectionReplaced) {
+          console.log('[WhatsApp] Session utilisee ailleurs - cette instance cede la place');
+        } else {
+          console.log('[WhatsApp] Reconnexion dans 10s (code:', code, ')');
+          setTimeout(initWhatsApp, 10000);
         }
       } else if (connection === 'open') {
         isConnected = true;
