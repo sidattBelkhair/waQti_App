@@ -82,7 +82,7 @@ const initWhatsApp = async () => {
 
       if (qr) {
         currentQR = qr;
-        console.log('[WhatsApp] QR pret - ouvre: /api/admin/whatsapp/qr dans ton navigateur');
+        console.log('[WhatsApp] QR pret - ouvre: /api/whatsapp/qr dans ton navigateur');
         qrcode.generate(qr, { small: true });
       }
 

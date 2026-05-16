@@ -89,7 +89,7 @@ app.post('/api/seed', async (req, res) => {
 });
 
 // QR WhatsApp (accessible seulement si pas encore connecte)
-app.get('/api/admin/whatsapp/qr', async (req, res) => {
+app.get('/api/whatsapp/qr', async (req, res) => {
   const dataUrl = await getQRDataURL();
   if (!dataUrl) return res.send('<h2>WhatsApp deja connecte ou QR pas encore pret. Reessaie dans 5s.</h2>');
   res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>WaQti WhatsApp QR</title>
