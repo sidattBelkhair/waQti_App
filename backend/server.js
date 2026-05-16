@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./src/config/database');
 const errorHandler = require('./src/middleware/errorHandler');
-const { initWhatsApp } = require('./src/utils/whatsapp');
+const { initWhatsApp, closeWhatsApp } = require('./src/utils/whatsapp');
 require('dotenv').config();
 
 const app = express();
@@ -116,6 +116,12 @@ server.listen(PORT, () => {
   console.log('  Environnement: ' + (process.env.NODE_ENV || 'development'));
   console.log('  WebSocket: active');
   console.log('');
+});
+
+process.on('SIGTERM', async () => {
+  console.log('[Server] SIGTERM recu - fermeture propre...');
+  await closeWhatsApp();
+  server.close(() => process.exit(0));
 });
 
 module.exports = { app, server, io };

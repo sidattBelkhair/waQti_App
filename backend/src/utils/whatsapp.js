@@ -132,4 +132,13 @@ const sendWhatsAppOTP = async (telephone, otpCode) => {
 
 const isWhatsAppConnected = () => isConnected;
 
-module.exports = { initWhatsApp, sendWhatsAppOTP, isWhatsAppConnected };
+const closeWhatsApp = async () => {
+  if (sock) {
+    isConnected = false;
+    try { sock.end(); } catch (err) { console.error('[WhatsApp] Erreur fermeture:', err.message); }
+    sock = null;
+    console.log('[WhatsApp] Connexion fermee proprement');
+  }
+};
+
+module.exports = { initWhatsApp, sendWhatsAppOTP, isWhatsAppConnected, closeWhatsApp };
