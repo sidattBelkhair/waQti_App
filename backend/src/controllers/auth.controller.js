@@ -6,10 +6,18 @@ const { generateOTP, isOTPExpired } = require('../utils/otp');
 const { ROLES, USER_STATUS } = require('../utils/constants');
 const { sendOTP, sendResetLink } = require('../utils/sms');
 
+const normalizePhone = (tel) => {
+  const digits = String(tel).replace(/\D/g, '');
+  if (digits.startsWith('222')) return '+' + digits;
+  if (digits.length === 8) return '+222' + digits;
+  return '+' + digits;
+};
+
 // POST /api/auth/register
 exports.register = async (req, res) => {
   try {
-    const { nom, email, telephone, motDePasse, role } = req.body;
+    const { nom, email, motDePasse, role } = req.body;
+    const telephone = normalizePhone(req.body.telephone);
 
     const existingPhone = await User.findOne({ telephone });
     if (existingPhone) {
@@ -57,10 +65,14 @@ exports.register = async (req, res) => {
 // POST /api/auth/login
 exports.login = async (req, res) => {
   try {
-    const { identifier, motDePasse } = req.body;
+    const { motDePasse } = req.body;
+    const identifier = req.body.identifier;
+    const normalizedId = identifier && !identifier.includes('@')
+      ? normalizePhone(identifier)
+      : identifier;
 
     const user = await User.findOne({
-      $or: [{ email: identifier }, { telephone: identifier }],
+      $or: [{ email: normalizedId }, { telephone: normalizedId }, { telephone: identifier }],
     });
 
     if (!user || !(await user.comparePassword(motDePasse))) {
@@ -257,7 +269,7 @@ exports.changePhone = async (req, res) => {
 // POST /api/auth/forgot-password
 exports.forgotPassword = async (req, res) => {
   try {
-    const { telephone } = req.body;
+    const telephone = normalizePhone(req.body.telephone);
 
     const user = await User.findOne({ telephone });
     if (!user) return res.status(404).json({ success: false, error: 'Utilisateur non trouve' });
