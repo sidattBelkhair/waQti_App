@@ -6,7 +6,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./src/config/database');
 const errorHandler = require('./src/middleware/errorHandler');
-const { initTwilio } = require('./src/utils/sms');
 const { initWhatsApp } = require('./src/utils/whatsapp');
 require('dotenv').config();
 
@@ -28,7 +27,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Connexion MongoDB
 connectDB();
-initTwilio();
 initWhatsApp();
 
 // Routes API
