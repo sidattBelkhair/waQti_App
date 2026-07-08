@@ -172,7 +172,7 @@ exports.addConge = async (req, res) => {
 // GET /api/etablissements (recherche)
 exports.searchEtablissements = async (req, res) => {
   try {
-    const { nom, type, ville, lat, lng, page = 1 } = req.query;
+    const { nom, type, ville, page = 1 } = req.query;
     const limit = 20;
     const skip = (page - 1) * limit;
 
@@ -181,23 +181,14 @@ exports.searchEtablissements = async (req, res) => {
     if (type) query.type = type;
     if (ville) query['adresse.ville'] = new RegExp(ville, 'i');
 
-    let findQuery;
-
-    if (lat && lng) {
-      findQuery = Etablissement.find({
-        ...query,
-        'adresse.coordonnees': {
-          $near: {
-            $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
-            $maxDistance: 50000,
-          },
-        },
-      });
-    } else {
-      findQuery = Etablissement.find(query);
-    }
-
-    const etablissements = await findQuery
+    // Note : le tri/affichage par distance est calcule cote client (l'app a
+    // deja les coordonnees GPS de l'utilisateur et gere le cas ou un
+    // etablissement n'a pas de coordonnees renseignees). On ne filtre donc
+    // plus par $near ici : un filtre geospatial strict excluait a tort tout
+    // etablissement sans coordonnees GPS precises (valeur par defaut [0,0]),
+    // qui sont la grande majorite puisque le formulaire d'inscription ne
+    // capture que ville/rue en texte.
+    const etablissements = await Etablissement.find(query)
       .select('nom type adresse.ville adresse.coordonnees noteMoyenne photo horaires')
       .skip(skip)
       .limit(limit);
