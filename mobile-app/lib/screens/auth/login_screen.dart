@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../config/theme.dart';
+import '../../widgets/waqti_wordmark.dart';
 import '../../l10n/app_strings.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
@@ -48,10 +49,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Icon(Icons.access_time_rounded, color: Colors.white, size: 44),
+                child: const Icon(Icons.timer_outlined, color: Colors.white, size: 44),
               ),
               const SizedBox(height: 16),
-              Text(context.tr('app_name'), style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white)),
+              WaqtiWordmark(size: 38, color: Colors.white, isArabic: context.watch<LocaleProvider>().isArabic),
               Text(context.tr('app_subtitle'), style: const TextStyle(fontSize: 14, color: Colors.white70)),
               const SizedBox(height: 12),
               GestureDetector(

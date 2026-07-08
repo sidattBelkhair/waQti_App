@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../profile/profile_screen.dart';
-import 'gestionnaire_etablissement_screen.dart';
+import '../../l10n/app_strings.dart';
+import 'gestionnaire_file_screen.dart';
+import 'gestionnaire_stats_screen.dart';
 import 'gestionnaire_services_screen.dart';
-import 'gestionnaire_tickets_screen.dart';
 
 class GestionnaireHomeScreen extends StatefulWidget {
   const GestionnaireHomeScreen({super.key});
@@ -15,9 +16,9 @@ class _State extends State<GestionnaireHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final screens = [
-      const GestionnaireEtablissementScreen(),
+      const GestionnaireFileScreen(),
+      const GestionnaireStatsScreen(),
       const GestionnaireServicesScreen(),
-      const GestionnaireTicketsScreen(),
       const ProfileScreen(),
     ];
 
@@ -26,23 +27,23 @@ class _State extends State<GestionnaireHomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-              icon: Icon(Icons.business_outlined),
-              selectedIcon: Icon(Icons.business),
-              label: 'Établissement'),
+              icon: const Icon(Icons.confirmation_number_outlined),
+              selectedIcon: const Icon(Icons.confirmation_number),
+              label: context.tr('g_nav_file')),
           NavigationDestination(
-              icon: Icon(Icons.layers_outlined),
-              selectedIcon: Icon(Icons.layers),
-              label: 'Services'),
+              icon: const Icon(Icons.bar_chart_outlined),
+              selectedIcon: const Icon(Icons.bar_chart),
+              label: context.tr('g_nav_stats')),
           NavigationDestination(
-              icon: Icon(Icons.confirmation_number_outlined),
-              selectedIcon: Icon(Icons.confirmation_number),
-              label: 'Tickets'),
+              icon: const Icon(Icons.layers_outlined),
+              selectedIcon: const Icon(Icons.layers),
+              label: context.tr('g_nav_services')),
           NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Profil'),
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: context.tr('profile')),
         ],
       ),
     );

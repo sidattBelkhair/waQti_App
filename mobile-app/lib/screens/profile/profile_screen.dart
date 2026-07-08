@@ -5,6 +5,7 @@ import '../../providers/locale_provider.dart';
 import '../../services/api_service.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_strings.dart';
+import '../gestionnaire/gestionnaire_etablissement_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -106,7 +107,19 @@ class ProfileScreen extends StatelessWidget {
             decoration: BoxDecoration(color: WaqtiTheme.primaryLight, borderRadius: BorderRadius.circular(20)),
             child: Text(user.role, style: const TextStyle(color: WaqtiTheme.primary, fontWeight: FontWeight.w600)),
           ),
-          const SizedBox(height: 28),
+          if (user.role == 'gestionnaire') ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.business_outlined),
+                label: Text(context.tr('g_manage_etab')),
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const GestionnaireEtablissementScreen())),
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16),

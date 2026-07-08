@@ -34,6 +34,8 @@ class SocketService {
     });
   }
 
+  bool get isConnected => _socket?.connected ?? false;
+
   void joinService(String serviceId) => _socket?.emit('join_service', serviceId);
   void joinUser(String userId) => _socket?.emit('join_user', userId);
   void leaveService(String serviceId) => _socket?.emit('leave_service', serviceId);

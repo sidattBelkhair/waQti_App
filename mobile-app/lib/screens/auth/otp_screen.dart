@@ -109,25 +109,25 @@ class _OTPScreenState extends State<OTPScreen> {
                 },
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
+                    color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFFCA28)),
+                    border: Border.all(color: WaqtiTheme.border),
                   ),
                   child: Column(children: [
-                    const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(Icons.bug_report_outlined, color: Color(0xFFF57F17), size: 16),
-                      SizedBox(width: 6),
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(Icons.bug_report_outlined, color: WaqtiTheme.textSecondary, size: 14),
+                      const SizedBox(width: 6),
                       Text('Mode test — appuyez pour remplir',
-                          style: TextStyle(fontSize: 12, color: Color(0xFFF57F17))),
+                          style: TextStyle(fontSize: 11, color: WaqtiTheme.textSecondary)),
                     ]),
                     const SizedBox(height: 6),
                     Text(
                       widget.devOtp!,
                       style: const TextStyle(
-                          fontSize: 36, fontWeight: FontWeight.bold,
-                          letterSpacing: 10, color: Color(0xFFF57F17)),
+                          fontSize: 28, fontWeight: FontWeight.bold,
+                          letterSpacing: 8, color: WaqtiTheme.textPrimary),
                     ),
                   ]),
                 ),

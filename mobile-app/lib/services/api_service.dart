@@ -105,6 +105,9 @@ class ApiService {
     _dio.put('/etablissements/$id', data: data);
   Future<Response> deleteEtablissement(String id) =>
     _dio.delete('/etablissements/$id');
+  Future<Response> updateService(String etabId, String serviceId, Map<String, dynamic> data) =>
+    _dio.put('/etablissements/$etabId/services/$serviceId', data: data);
+  Future<Response> getGestionnaireStatsToday() => _dio.get('/gestionnaire/stats/today');
 
   Future<void> saveTokens(String access, String refresh) async {
     final prefs = await SharedPreferences.getInstance();

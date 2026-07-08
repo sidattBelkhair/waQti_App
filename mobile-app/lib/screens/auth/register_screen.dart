@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
+import '../../widgets/gradient_app_bar.dart';
 import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -40,7 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inscription')),
+      appBar: const GradientAppBar(title: Text('Inscription')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -106,12 +107,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _loading ? null : _register,
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Creer mon compte',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: WaqtiTheme.primaryGradient,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
+                onPressed: _loading ? null : _register,
+                child: _loading
+                    ? const SizedBox(width: 22, height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Creer mon compte',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
             ),
           ),
         ]),

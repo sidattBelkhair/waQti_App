@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../config/theme.dart';
-import '../etablissement/qr_scanner_screen.dart';
+import '../../l10n/app_strings.dart';
 
 class GestionnaireServicesScreen extends StatefulWidget {
   const GestionnaireServicesScreen({super.key});
@@ -10,7 +10,7 @@ class GestionnaireServicesScreen extends StatefulWidget {
 
 class _State extends State<GestionnaireServicesScreen> {
   List<Map<String, dynamic>> _services = [];
-  Map<String, Map<String, dynamic>> _fileStatus = {};
+  Map<String, int> _enAttente = {};
   Map<String, dynamic>? _etab;
   String? _etabId;
   bool _loading = true;
@@ -82,69 +82,32 @@ class _State extends State<GestionnaireServicesScreen> {
             .catchError((_) => <String, dynamic>{})),
       );
 
-      final statusMap = <String, Map<String, dynamic>>{};
+      final enAttenteMap = <String, int>{};
       for (var i = 0; i < svcs.length; i++) {
-        final raw = statuses[i];
-        final fileRaw = raw['file'];
+        final fileRaw = statuses[i]['file'];
         final fileData = fileRaw is Map ? Map<String, dynamic>.from(fileRaw) : <String, dynamic>{};
-
-        // Calculer enAttente depuis le tableau tickets
         final tickets = fileData['tickets'];
-        final enAttente = tickets is List ? tickets.length : 0;
-
-        // ticketEnCours : garder seulement si c'est un Map (objet peuplé)
-        final enCours = fileData['ticketEnCours'];
-        final enCoursMap = enCours is Map ? Map<String, dynamic>.from(enCours) : null;
-
-        statusMap[svcs[i]['_id'] as String] = {
-          ...fileData,
-          'totalEnAttente': enAttente,
-          'ticketEnCours': enCoursMap,
-        };
+        enAttenteMap[svcs[i]['_id'] as String] = tickets is List ? tickets.length : 0;
       }
 
       setState(() {
         _services = svcs;
-        _fileStatus = statusMap;
+        _enAttente = enAttenteMap;
       });
     } catch (_) {}
     setState(() => _loading = false);
   }
 
-  Future<void> _appelSuivant(String serviceId) async {
+  Future<void> _toggleActif(Map<String, dynamic> service, bool actif) async {
+    final id = service['_id'] as String;
+    setState(() => service['actif'] = actif);
     try {
-      await ApiService().appelSuivant(serviceId, 1);
-      await _load();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Client suivant appelé'),
-            backgroundColor: WaqtiTheme.success));
-      }
+      await ApiService().updateService(_etabId!, id, {'actif': actif});
     } catch (e) {
-      if (mounted) {
-        String msg = 'Erreur';
-        try { msg = (e as dynamic).response?.data?['error'] ?? 'Erreur'; } catch (_) {}
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(msg.contains('File vide') ? 'La file est vide' : msg),
-            backgroundColor: WaqtiTheme.warning));
-      }
-    }
-  }
-
-  Future<void> _marquerAbsent(String serviceId) async {
-    try {
-      await ApiService().marquerAbsent(serviceId);
-      await _load();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Client marqué absent'),
-            backgroundColor: WaqtiTheme.warning));
-      }
-    } catch (e) {
+      setState(() => service['actif'] = !actif);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: WaqtiTheme.danger));
+            content: Text('Erreur: $e'), backgroundColor: WaqtiTheme.danger));
       }
     }
   }
@@ -364,40 +327,47 @@ class _State extends State<GestionnaireServicesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: WaqtiTheme.background,
-      appBar: AppBar(
-        title: const Text('Mes Services'),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _etabId == null
-              ? _buildNoEtab()
-              : _services.isEmpty
-                  ? _buildEmpty()
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _services.length,
-                        itemBuilder: (_, i) => _ServiceCard(
-                          service: _services[i],
-                          status: _fileStatus[_services[i]['_id']] ?? {},
-                          onAppelSuivant: () =>
-                              _appelSuivant(_services[i]['_id'] as String),
-                          onAbsent: () =>
-                              _marquerAbsent(_services[i]['_id'] as String),
-                          onScanQR: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      const QrScannerScreen()))
-                              .then((_) => _load()),
-                          onDelete: () => _confirmDelete(_services[i]),
-                        ),
-                      ),
-                    ),
+      body: CustomScrollView(slivers: [
+        SliverToBoxAdapter(
+          child: Container(
+            decoration: const BoxDecoration(gradient: WaqtiTheme.primaryGradient),
+            padding: const EdgeInsets.fromLTRB(20, 50, 12, 20),
+            child: Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(context.tr('g_my_services'),
+                      style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(context.tr('g_open_close_hint'),
+                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                ]),
+              ),
+              IconButton(icon: const Icon(Icons.refresh, color: Colors.white), onPressed: _load),
+            ]),
+          ),
+        ),
+        if (_loading)
+          const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
+        else if (_etabId == null)
+          SliverFillRemaining(hasScrollBody: false, child: _buildNoEtab())
+        else if (_services.isEmpty)
+          SliverFillRemaining(hasScrollBody: false, child: _buildEmpty())
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (_, i) => _ServiceCard(
+                  service: _services[i],
+                  enAttente: _enAttente[_services[i]['_id']] ?? 0,
+                  onToggle: (v) => _toggleActif(_services[i], v),
+                  onDelete: () => _confirmDelete(_services[i]),
+                ),
+                childCount: _services.length,
+              ),
+            ),
+          ),
+      ]),
       floatingActionButton: _etabId != null
           ? FloatingActionButton.extended(
               onPressed: _showAddDialog,
@@ -408,15 +378,15 @@ class _State extends State<GestionnaireServicesScreen> {
     );
   }
 
-  Widget _buildNoEtab() => const Center(
+  Widget _buildNoEtab() => Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(Icons.business_outlined,
+            const Icon(Icons.business_outlined,
                 size: 64, color: WaqtiTheme.textSecondary),
-            SizedBox(height: 16),
-            Text("Créez d'abord votre établissement",
-                style: TextStyle(
+            const SizedBox(height: 16),
+            Text(context.tr('g_no_etab'),
+                style: const TextStyle(
                     fontSize: 16, color: WaqtiTheme.textSecondary),
                 textAlign: TextAlign.center),
           ]),
@@ -445,7 +415,6 @@ class _State extends State<GestionnaireServicesScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(color: WaqtiTheme.textSecondary),
             ),
-            const SizedBox(height: 80),
           ]),
         ),
       );
@@ -454,231 +423,54 @@ class _State extends State<GestionnaireServicesScreen> {
 // ─── Service Card ──────────────────────────────────────────────
 class _ServiceCard extends StatelessWidget {
   final Map<String, dynamic> service;
-  final Map<String, dynamic> status;
-  final VoidCallback onAppelSuivant, onAbsent, onScanQR, onDelete;
+  final int enAttente;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onDelete;
 
   const _ServiceCard({
     required this.service,
-    required this.status,
-    required this.onAppelSuivant,
-    required this.onAbsent,
-    required this.onScanQR,
+    required this.enAttente,
+    required this.onToggle,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     final nom = service['nom'] as String? ?? '';
-    final duree = service['dureeEstimee'] as int? ?? 15;
-    final enAttente = (status['totalEnAttente'] as int?) ?? 0;
-    final enCours = status['ticketEnCours'];
-    final enCoursMap = enCours is Map
-        ? Map<String, dynamic>.from(enCours)
-        : <String, dynamic>{};
-    final hasEnCours = enCoursMap.isNotEmpty;
-
-    final queueColor = enAttente == 0
-        ? WaqtiTheme.success
-        : enAttente < 5
-            ? WaqtiTheme.warning
-            : WaqtiTheme.danger;
+    final actif = service['actif'] as bool? ?? true;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: const Border.fromBorderSide(
-            BorderSide(color: Color(0xFFE2E8F0))),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        border: Border.all(color: WaqtiTheme.border),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Header
+      child: Row(children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          width: 44, height: 44,
           decoration: BoxDecoration(
-            color: WaqtiTheme.primary.withOpacity(0.05),
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: Row(children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                  color: WaqtiTheme.primary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.layers_outlined,
-                  color: WaqtiTheme.primary, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(nom,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
-                Text('$duree min par client',
-                    style: const TextStyle(
-                        color: WaqtiTheme.textSecondary, fontSize: 12)),
-              ]),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline,
-                  color: WaqtiTheme.danger, size: 20),
-              onPressed: onDelete,
-              tooltip: 'Supprimer',
-              visualDensity: VisualDensity.compact,
-            ),
+              color: WaqtiTheme.primaryLight,
+              borderRadius: BorderRadius.circular(12)),
+          child: const Icon(Icons.layers_outlined, color: WaqtiTheme.primary, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(nom, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            const SizedBox(height: 3),
+            Text('$enAttente ${context.tr('g_waiting')}',
+                style: const TextStyle(color: WaqtiTheme.textSecondary, fontSize: 12.5)),
           ]),
         ),
-
-        // Stats
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Row(children: [
-            _StatPill(
-              icon: Icons.people_outlined,
-              label: '$enAttente en attente',
-              color: queueColor,
-            ),
-            const SizedBox(width: 8),
-            if (hasEnCours)
-              _StatPill(
-                icon: Icons.play_circle_outline,
-                label: 'En cours: ${enCoursMap['numero'] ?? ''}',
-                color: WaqtiTheme.primary,
-              ),
-          ]),
+        IconButton(
+          icon: const Icon(Icons.delete_outline, color: WaqtiTheme.danger, size: 19),
+          onPressed: onDelete,
+          visualDensity: VisualDensity.compact,
         ),
-
-        // Client en cours
-        if (hasEnCours)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                  color: WaqtiTheme.primaryLight,
-                  borderRadius: BorderRadius.circular(10)),
-              child: Row(children: [
-                const Icon(Icons.person_outlined,
-                    size: 16, color: WaqtiTheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${(enCoursMap['utilisateur'] is Map ? (enCoursMap['utilisateur'] as Map)['nom'] : null) ?? 'Client'} '
-                    '— Ticket ${enCoursMap['numero'] ?? ''}',
-                    style: const TextStyle(
-                        fontSize: 13,
-                        color: WaqtiTheme.primary,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-
-        // Boutons d'action
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(children: [
-            Expanded(
-              child: _ActionBtn(
-                icon: Icons.skip_next_outlined,
-                label: 'Suivant',
-                color: WaqtiTheme.primary,
-                onTap: onAppelSuivant,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _ActionBtn(
-                icon: Icons.qr_code_scanner,
-                label: 'Scanner',
-                color: WaqtiTheme.success,
-                onTap: onScanQR,
-              ),
-            ),
-            if (hasEnCours) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ActionBtn(
-                  icon: Icons.person_off_outlined,
-                  label: 'Absent',
-                  color: WaqtiTheme.warning,
-                  onTap: onAbsent,
-                ),
-              ),
-            ],
-          ]),
-        ),
+        Switch(value: actif, activeColor: WaqtiTheme.success, onChanged: onToggle),
       ]),
     );
   }
-}
-
-class _StatPill extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  const _StatPill(
-      {required this.icon, required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w600)),
-        ]),
-      );
-}
-
-class _ActionBtn extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  const _ActionBtn(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-              color: color.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
-              border:
-                  Border.all(color: color.withOpacity(0.25))),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 4),
-            Text(label,
-                style: TextStyle(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600)),
-          ]),
-        ),
-      );
 }

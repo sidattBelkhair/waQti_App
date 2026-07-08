@@ -127,18 +127,18 @@ class _State extends State<ResetPasswordScreen> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
+                    color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFFFCA28))),
+                    border: Border.all(color: WaqtiTheme.border)),
                 child: Row(children: [
                   const Icon(Icons.bug_report_outlined,
-                      color: Color(0xFFF57F17), size: 16),
+                      color: WaqtiTheme.textSecondary, size: 14),
                   const SizedBox(width: 8),
                   Text('Mode test — Code : ${widget.devToken}',
                       style: const TextStyle(
-                          color: Color(0xFFF57F17),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13)),
+                          color: WaqtiTheme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12)),
                 ]),
               ),
             ],

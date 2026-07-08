@@ -2,11 +2,13 @@ const Ticket = require('../models/Ticket');
 const File = require('../models/File');
 const { TICKET_STATUS, TICKET_MODE, PRIORITY, WS_EVENTS } = require('../utils/constants');
 
-const generateTicketNumber = () => {
-  const d = new Date();
-  const prefix = 'WQ' + d.getFullYear().toString().slice(2) + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-  const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
-  return prefix + '-' + random;
+const generateTicketNumber = async () => {
+  for (let i = 0; i < 20; i++) {
+    const num = String(100 + Math.floor(Math.random() * 900));
+    const exists = await Ticket.exists({ numero: num });
+    if (!exists) return num;
+  }
+  throw new Error('Impossible de generer un numero unique');
 };
 
 async function recalculerPositions(fileId, io) {
@@ -64,7 +66,7 @@ exports.createTicket = async (req, res) => {
     const tempsEstime = position * file.dureeMoyenneParClient;
 
     const ticket = new Ticket({
-      numero: generateTicketNumber(),
+      numero: await generateTicketNumber(),
       utilisateur: req.user._id,
       etablissement: etablissementId,
       service: serviceId,
@@ -100,7 +102,7 @@ exports.createTicketRDV = async (req, res) => {
     const { etablissementId, serviceId, date, creneau } = req.body;
 
     const ticket = new Ticket({
-      numero: generateTicketNumber(),
+      numero: await generateTicketNumber(),
       utilisateur: req.user._id,
       etablissement: etablissementId,
       service: serviceId,

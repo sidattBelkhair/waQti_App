@@ -4,7 +4,9 @@ class WaqtiTheme {
   static const Color primary = Color(0xFF2563EB);
   static const Color primaryDark = Color(0xFF1D4ED8);
   static const Color primaryLight = Color(0xFFEFF6FF);
-  static const Color accent = Color(0xFF06B6D4);
+  static const Color navy = Color(0xFF0B1E3A);
+  static const Color navyLight = Color(0xFF12306B);
+  static const Color accent = Color(0xFF3B82F6);
   static const Color success = Color(0xFF059669);
   static const Color warning = Color(0xFFF59E0B);
   static const Color danger = Color(0xFFDC2626);
@@ -14,8 +16,10 @@ class WaqtiTheme {
   static const Color textSecondary = Color(0xFF64748B);
   static const Color border = Color(0xFFE2E8F0);
 
+  // Dégradé identité ConnectSoft : bleu marine -> bleu royal (comme le roll-up)
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF2563EB), Color(0xFF06B6D4)],
+    colors: [Color(0xFF0B1E3A), Color(0xFF12306B), Color(0xFF2563EB)],
+    stops: [0.0, 0.55, 1.0],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../models/etablissement.dart';
 import '../../config/theme.dart';
+import '../../widgets/pulsing_dot.dart';
 import '../etablissement/etablissement_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -105,13 +106,19 @@ class _SearchScreenState extends State<SearchScreen> {
       // Charger les stats de file pour chaque établissement
       final metaList = await Future.wait(etabs.map((e) async {
         int totalQueue = 0;
+        int tpsSum = 0;
+        int tpsCount = 0;
         try {
           final svcRes = await ApiService().getServices(e.id);
           final svcs = svcRes.data['services'] as List? ?? [];
           for (final svc in svcs) {
             try {
               final f = await ApiService().getFileStatus(svc['_id'] as String);
-              totalQueue += (f.data['file']['totalEnAttente'] as int? ?? 0);
+              final nb = f.data['file']['totalEnAttente'] as int? ?? 0;
+              final duree = svc['dureeEstimee'] as int? ?? 15;
+              totalQueue += nb;
+              tpsSum += duree * (nb == 0 ? 1 : nb);
+              tpsCount++;
             } catch (_) {}
           }
         } catch (_) {}
@@ -119,6 +126,7 @@ class _SearchScreenState extends State<SearchScreen> {
           etab: e,
           distanceKm: _distanceKm(e),
           totalQueue: totalQueue,
+          tempsEstime: tpsCount > 0 ? (tpsSum / tpsCount).round() : 0,
         );
       }));
 
@@ -173,18 +181,14 @@ class _SearchScreenState extends State<SearchScreen> {
         slivers: [
           // ── AppBar ──
           SliverAppBar(
-            expandedHeight: 140,
+            expandedHeight: 190,
             floating: true,
             snap: true,
-            backgroundColor: WaqtiTheme.primary,
+            backgroundColor: WaqtiTheme.navy,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [WaqtiTheme.primary, WaqtiTheme.primaryDark],
-                  ),
+                  gradient: WaqtiTheme.primaryGradient,
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 50, 20, 16),
                 child: Column(
@@ -350,9 +354,11 @@ class _SearchScreenState extends State<SearchScreen> {
           // ── Liste ──
           if (_loading)
             const SliverFillRemaining(
+                hasScrollBody: false,
                 child: Center(child: CircularProgressIndicator()))
           else if (_results.isEmpty)
             const SliverFillRemaining(
+              hasScrollBody: false,
               child: Center(
                 child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -396,10 +402,12 @@ class _EtabWithMeta {
   final Etablissement etab;
   final double? distanceKm;
   final int totalQueue;
+  final int tempsEstime;
   const _EtabWithMeta(
       {required this.etab,
       required this.distanceKm,
-      required this.totalQueue});
+      required this.totalQueue,
+      required this.tempsEstime});
 }
 
 // ─── Category Card ─────────────────────────────────────────────
@@ -464,11 +472,30 @@ class _EtabCard extends StatelessWidget {
   final VoidCallback onTap;
   const _EtabCard({required this.meta, required this.onTap});
 
+  static const Map<String, Color> _pastelByType = {
+    'hopital':    Color(0xFFFDE8E8),
+    'banque':     Color(0xFFE3EDFB),
+    'ambassade':  Color(0xFFF0E6F9),
+    'mairie':     Color(0xFFE1F3F5),
+    'poste':      Color(0xFFFDECDC),
+    'telecom':    Color(0xFFE6F4E6),
+    'universite': Color(0xFFEDF3E1),
+    'autre':      Color(0xFFEBE6F7),
+  };
+
   @override
   Widget build(BuildContext context) {
     final e = meta.etab;
     final dist = meta.distanceKm;
-    final queue = meta.totalQueue;
+    final tps = meta.tempsEstime;
+    final badgeColor = tps == 0
+        ? WaqtiTheme.success
+        : tps <= 15
+            ? WaqtiTheme.success
+            : tps <= 30
+                ? WaqtiTheme.primary
+                : WaqtiTheme.warning;
+    final pastel = _pastelByType[e.type] ?? _pastelByType['autre']!;
 
     return GestureDetector(
       onTap: onTap,
@@ -482,12 +509,12 @@ class _EtabCard extends StatelessWidget {
                 BorderSide(color: Color(0xFFE2E8F0)))),
         child: Row(children: [
           Container(
-            width: 50, height: 50,
+            width: 52, height: 52,
             decoration: BoxDecoration(
-                color: WaqtiTheme.primaryLight,
-                borderRadius: BorderRadius.circular(12)),
+                color: pastel,
+                borderRadius: BorderRadius.circular(14)),
             child: Icon(_iconForType(e.type),
-                color: WaqtiTheme.primary, size: 26),
+                color: WaqtiTheme.textPrimary.withOpacity(0.65), size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -497,55 +524,37 @@ class _EtabCard extends StatelessWidget {
               Text(e.nom,
                   style: const TextStyle(
                       fontSize: 15, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 3),
-              Text('${e.adresse.ville} · ${_typeLabel(e.type)}',
-                  style: const TextStyle(
-                      color: WaqtiTheme.textSecondary, fontSize: 12)),
-              const SizedBox(height: 5),
+              const SizedBox(height: 4),
               Row(children: [
-                const Icon(Icons.star_rounded,
-                    size: 14, color: Colors.amber),
-                const SizedBox(width: 3),
-                Text(
-                    '${e.noteMoyenne.toStringAsFixed(1)} (${e.nombreAvis})',
+                const PulsingDot(),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    dist != null
+                        ? '${e.adresse.ville} · ${dist < 1 ? '${(dist * 1000).round()} m' : '${dist.toStringAsFixed(1)} km'}'
+                        : e.adresse.ville,
                     style: const TextStyle(
-                        fontSize: 11,
-                        color: WaqtiTheme.textSecondary)),
-                const SizedBox(width: 10),
-                // ── Distance ──
-                if (dist != null) ...[
-                  const Icon(Icons.near_me,
-                      size: 13, color: WaqtiTheme.primary),
-                  const SizedBox(width: 3),
-                  Text(
-                    dist < 1
-                        ? '${(dist * 1000).round()} m'
-                        : '${dist.toStringAsFixed(1)} km',
-                    style: const TextStyle(
-                        fontSize: 11,
-                        color: WaqtiTheme.primary,
-                        fontWeight: FontWeight.w600),
+                        color: WaqtiTheme.textSecondary, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 10),
-                ],
-                // ── File d'attente ──
-                const Icon(Icons.people_outline,
-                    size: 13, color: WaqtiTheme.textSecondary),
-                const SizedBox(width: 3),
-                Text('$queue en attente',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: queue == 0
-                            ? WaqtiTheme.success
-                            : queue < 5
-                                ? WaqtiTheme.warning
-                                : WaqtiTheme.danger,
-                        fontWeight: FontWeight.w600)),
+                ),
               ]),
             ]),
           ),
-          const Icon(Icons.chevron_right,
-              color: WaqtiTheme.textSecondary),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+                color: badgeColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(20)),
+            child: Text(
+                tps == 0 ? 'Libre' : '~$tps min',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: badgeColor)),
+          ),
         ]),
       ),
     );
@@ -564,13 +573,4 @@ class _EtabCard extends StatelessWidget {
     }
   }
 
-  String _typeLabel(String type) {
-    const m = {
-      'hopital': 'Hôpital', 'banque': 'Banque',
-      'ambassade': 'Ambassade', 'mairie': 'Mairie',
-      'poste': 'Poste', 'telecom': 'Télécom',
-      'universite': 'Université', 'autre': 'Administration',
-    };
-    return m[type] ?? type;
-  }
 }

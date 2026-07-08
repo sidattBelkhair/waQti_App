@@ -149,7 +149,7 @@ class _State extends State<GestionnaireEtablissementScreen> {
             SliverAppBar(
               expandedHeight: 210,
               pinned: true,
-              backgroundColor: WaqtiTheme.primary,
+              backgroundColor: WaqtiTheme.navy,
               actions: [
                 IconButton(
                   icon: const Icon(Icons.edit_outlined, color: Colors.white),
@@ -160,11 +160,7 @@ class _State extends State<GestionnaireEtablissementScreen> {
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [WaqtiTheme.primary, WaqtiTheme.primaryDark],
-                    ),
+                    gradient: WaqtiTheme.primaryGradient,
                   ),
                   padding: const EdgeInsets.fromLTRB(20, 80, 20, 20),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start,

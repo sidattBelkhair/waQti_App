@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../config/theme.dart';
+import '../../widgets/gradient_app_bar.dart';
 import 'reset_password_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -47,7 +48,7 @@ class _State extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mot de passe oublié')),
+      appBar: const GradientAppBar(title: Text('Mot de passe oublié')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -80,16 +81,23 @@ class _State extends State<ForgotPasswordScreen> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _submit,
-                child: _loading
-                    ? const SizedBox(
-                        width: 20, height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Envoyer le code',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: WaqtiTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
+                  onPressed: _loading ? null : _submit,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 20, height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Text('Envoyer le code',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
               ),
             ),
           ],

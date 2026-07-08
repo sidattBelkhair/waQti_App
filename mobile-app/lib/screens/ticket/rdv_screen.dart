@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/ticket.dart';
 import '../../config/theme.dart';
+import '../../widgets/gradient_app_bar.dart';
 import '../home/home_screen.dart';
 import 'ticket_detail_screen.dart';
 
@@ -65,7 +66,7 @@ class _State extends State<RdvScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: WaqtiTheme.background,
-      appBar: AppBar(title: const Text('Prendre un rendez-vous')),
+      appBar: const GradientAppBar(title: Text('Prendre un rendez-vous')),
       body: Column(children: [
         Expanded(
           child: SingleChildScrollView(
@@ -204,21 +205,29 @@ class _State extends State<RdvScreen> {
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: _loading
-                    ? const SizedBox(width: 20, height: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : const Icon(Icons.check_circle_outline),
-                label: Text(_loading ? 'Confirmation...' : 'Confirmer le rendez-vous',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00695C),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30))),
-                onPressed: (_loading || _selectedCreneau == null) ? null : _confirm,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: (_loading || _selectedCreneau == null) ? null : WaqtiTheme.primaryGradient,
+                  color: (_loading || _selectedCreneau == null) ? WaqtiTheme.border : null,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: ElevatedButton.icon(
+                  icon: _loading
+                      ? const SizedBox(width: 20, height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.check_circle_outline),
+                  label: Text(_loading ? 'Confirmation...' : 'Confirmer le rendez-vous',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14))),
+                  onPressed: (_loading || _selectedCreneau == null) ? null : _confirm,
+                ),
               ),
             ),
             const SizedBox(height: 8),

@@ -54,11 +54,12 @@ class _State extends State<EtablissementDetailScreen> {
     setState(() => _loading = false);
   }
 
-  void _goToTicket(Service s) {
+  void _goToTicket(Service s, {int? nbPersonnes, int? tempsEstime}) {
     Navigator.push(context, MaterialPageRoute(
         builder: (_) => CreateTicketScreen(
             etabId: _etab!.id, etabNom: _etab!.nom,
-            serviceId: s.id, serviceNom: s.nom)));
+            serviceId: s.id, serviceNom: s.nom,
+            nbPersonnes: nbPersonnes, tempsEstime: tempsEstime)));
   }
 
   void _goToRdv(Service s) {
@@ -141,42 +142,26 @@ class _State extends State<EtablissementDetailScreen> {
           slivers: [
             // ── Header ──
             SliverAppBar(
-              expandedHeight: 240,
+              expandedHeight: 150,
               pinned: true,
-              backgroundColor: WaqtiTheme.primary,
+              backgroundColor: WaqtiTheme.navy,
+              foregroundColor: Colors.white,
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [WaqtiTheme.primary, Color(0xFF00897B)],
-                    ),
+                    gradient: WaqtiTheme.primaryGradient,
                   ),
-                  padding: const EdgeInsets.fromLTRB(20, 90, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(20, 60, 20, 18),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(20)),
-                      child: Text(_typeLabel(e.type).toUpperCase(),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1)),
-                    ),
-                    const SizedBox(height: 8),
                     Text(e.nom,
                         style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 22,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Row(children: [
                       const Icon(Icons.location_on,
                           color: Colors.white70, size: 14),
@@ -190,22 +175,31 @@ class _State extends State<EtablissementDetailScreen> {
                             overflow: TextOverflow.ellipsis),
                       ),
                     ]),
-                    const SizedBox(height: 4),
-                    Row(children: [
-                      const Icon(Icons.star_rounded,
-                          color: Colors.amber, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                          '${e.noteMoyenne.toStringAsFixed(1)}/5',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                      Text(' (${e.nombreAvis} avis)',
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 12)),
-                    ]),
                   ]),
                 ),
+              ),
+            ),
+
+            // ── Bande info discrète ──
+            SliverToBoxAdapter(
+              child: Container(
+                width: double.infinity,
+                color: WaqtiTheme.primaryLight,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 10),
+                child: Row(children: [
+                  const Icon(Icons.access_time,
+                      size: 15, color: WaqtiTheme.primary),
+                  const SizedBox(width: 6),
+                  const Flexible(
+                    child: Text('Ouvert · 08h00–16h00 · File en temps réel',
+                        style: TextStyle(
+                            color: WaqtiTheme.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                ]),
               ),
             ),
 
@@ -231,6 +225,7 @@ class _State extends State<EtablissementDetailScreen> {
             // ── Liste des services ──
             _services.isEmpty
                 ? SliverFillRemaining(
+                    hasScrollBody: false,
                     child: Center(
                       child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -257,8 +252,8 @@ class _State extends State<EtablissementDetailScreen> {
                             service: s,
                             nbPersonnes: nb,
                             tempsEstime: tps,
-                            onTicket: () => _goToTicket(s),
-                            onRdv: () => _goToRdv(s),
+                            onTap: () => _goToTicket(s,
+                                nbPersonnes: nb, tempsEstime: tps),
                           );
                         },
                         childCount: _services.length,
@@ -269,11 +264,11 @@ class _State extends State<EtablissementDetailScreen> {
         ),
       ),
 
-      // ── Boutons fixes en bas ──
+      // ── RDV discret en bas ──
       bottomNavigationBar: _services.isEmpty
           ? null
           : Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -283,55 +278,23 @@ class _State extends State<EtablissementDetailScreen> {
                       offset: Offset(0, -2))
                 ],
               ),
-              child: Row(children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.confirmation_number_outlined),
-                    label: const Text('Prendre un ticket',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15)),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: WaqtiTheme.primary,
-                        foregroundColor: Colors.white,
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30))),
-                    onPressed: () => _pickServiceThen(isRdv: false),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.calendar_month_outlined),
-                  label: const Text('RDV',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                  label: const Text('Prendre un rendez-vous',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                   style: OutlinedButton.styleFrom(
-                      foregroundColor: WaqtiTheme.primary,
-                      side: const BorderSide(
-                          color: WaqtiTheme.primary, width: 1.5),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 14, horizontal: 16),
+                      foregroundColor: WaqtiTheme.textSecondary,
+                      side: const BorderSide(color: WaqtiTheme.border),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30))),
+                          borderRadius: BorderRadius.circular(14))),
                   onPressed: () => _pickServiceThen(isRdv: true),
                 ),
-              ]),
+              ),
             ),
     );
-  }
-
-  String _typeLabel(String type) {
-    const labels = {
-      'hopital': 'Hôpital',
-      'banque': 'Banque',
-      'ambassade': 'Ambassade',
-      'mairie': 'Mairie',
-      'poste': 'Poste',
-      'telecom': 'Télécom',
-      'universite': 'Université',
-      'autre': 'Administration',
-    };
-    return labels[type] ?? type;
   }
 }
 
@@ -340,113 +303,53 @@ class _ServiceCard extends StatelessWidget {
   final Service service;
   final int nbPersonnes;
   final int tempsEstime;
-  final VoidCallback onTicket;
-  final VoidCallback onRdv;
+  final VoidCallback onTap;
 
   const _ServiceCard({
     required this.service,
     required this.nbPersonnes,
     required this.tempsEstime,
-    required this.onTicket,
-    required this.onRdv,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tempsColor = tempsEstime <= 15
-        ? WaqtiTheme.success
-        : tempsEstime <= 30
-            ? WaqtiTheme.warning
-            : WaqtiTheme.danger;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: const Border.fromBorderSide(
-              BorderSide(color: Color(0xFFE2E8F0)))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Info ligne
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-          child: Row(children: [
-            Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(
-                  color: WaqtiTheme.primaryLight,
-                  borderRadius: BorderRadius.circular(12)),
-              child: Icon(_iconForService(service.nom),
-                  color: WaqtiTheme.primary, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(service.nom,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15)),
-                if (service.description.isNotEmpty)
-                  Text(service.description,
-                      style: const TextStyle(
-                          color: WaqtiTheme.textSecondary, fontSize: 12),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-              ]),
-            ),
-            const SizedBox(width: 8),
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text('$nbPersonnes en attente',
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: const Border.fromBorderSide(
+                BorderSide(color: Color(0xFFE2E8F0)))),
+        child: Row(children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+                color: WaqtiTheme.primaryLight,
+                borderRadius: BorderRadius.circular(12)),
+            child: Icon(_iconForService(service.nom),
+                color: WaqtiTheme.primary, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+              Text(service.nom,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                      color: WaqtiTheme.textSecondary)),
-              Text('~$tempsEstime min',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: tempsColor)),
+                      fontWeight: FontWeight.bold, fontSize: 15)),
+              const SizedBox(height: 3),
+              Text('$nbPersonnes en attente · ~$tempsEstime min',
+                  style: const TextStyle(
+                      color: WaqtiTheme.textSecondary, fontSize: 12)),
             ]),
-          ]),
-        ),
-
-        // Boutons par service
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          child: Row(children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.confirmation_number_outlined, size: 16),
-                label: const Text('Ticket',
-                    style: TextStyle(fontSize: 13)),
-                style: OutlinedButton.styleFrom(
-                    foregroundColor: WaqtiTheme.primary,
-                    side: const BorderSide(color: WaqtiTheme.primary),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10))),
-                onPressed: onTicket,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.calendar_month_outlined, size: 16),
-                label: const Text('RDV',
-                    style: TextStyle(fontSize: 13)),
-                style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF00897B),
-                    side: const BorderSide(color: Color(0xFF00897B)),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10))),
-                onPressed: onRdv,
-              ),
-            ),
-          ]),
-        ),
-      ]),
+          ),
+          const Icon(Icons.chevron_right, color: WaqtiTheme.textSecondary),
+        ]),
+      ),
     );
   }
 }
