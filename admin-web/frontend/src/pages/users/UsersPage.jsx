@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import DataTable from '../../components/ui/DataTable';
+import MobileCardList from '../../components/ui/MobileCardList';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { Search, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
@@ -76,11 +77,11 @@ export default function UsersPage() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <h2 className="text-2xl font-bold text-slate-800 mb-2">Utilisateurs</h2>
       <p className="text-slate-500 mb-6">{total} utilisateur(s)</p>
-      <div className="flex gap-3 mb-6">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="relative flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input type="text" placeholder="Rechercher par nom..." value={search}
             onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && loadData()}
@@ -97,9 +98,12 @@ export default function UsersPage() {
           Rechercher
         </button>
       </div>
-      {loading ? <p className="text-center text-slate-400 py-12">Chargement...</p> :
-        <DataTable columns={columns} data={users} />
-      }
+      {loading ? <p className="text-center text-slate-400 py-12">Chargement...</p> : (
+        <>
+          <div className="hidden lg:block"><DataTable columns={columns} data={users} /></div>
+          <div className="lg:hidden"><MobileCardList columns={columns} data={users} primaryKey="nom" /></div>
+        </>
+      )}
     </div>
   );
 }

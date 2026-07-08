@@ -4,7 +4,7 @@ import { Save, Bell, Tag, Timer, CreditCard } from 'lucide-react';
 export default function ConfigPage() {
   const [config, setConfig] = useState({ ticketExpiration: 120, maxTickets: 3, maxServices: 20 });
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <h2 className="text-2xl font-bold text-slate-800">Configuration</h2>
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-4"><Tag size={20} className="text-blue-600" /><h3 className="text-lg font-semibold">Categories</h3></div>

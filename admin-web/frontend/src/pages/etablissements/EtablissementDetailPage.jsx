@@ -26,26 +26,26 @@ export default function EtablissementDetailPage() {
   if (!etab) return <div className="p-8 text-center text-slate-400">Chargement...</div>;
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <button onClick={() => navigate('/etablissements')} className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-6">
         <ArrowLeft size={18} /> Retour
       </button>
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex flex-wrap items-center gap-3 mb-2">
           <h2 className="text-2xl font-bold text-slate-800">{etab.nom}</h2>
           <StatusBadge status={etab.statut} />
           <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{etab.type}</span>
         </div>
         <p className="text-slate-500 mb-3">{etab.description || 'Pas de description'}</p>
-        <div className="flex gap-4 text-sm text-slate-600">
+        <div className="flex flex-wrap gap-4 text-sm text-slate-600">
           <span className="flex items-center gap-1"><MapPin size={16} />{etab.adresse?.ville}</span>
           <span className="flex items-center gap-1"><Phone size={16} />{etab.telephone}</span>
           <span className="flex items-center gap-1"><Star size={16} className="text-yellow-500" />{etab.noteMoyenne}/5</span>
         </div>
       </div>
-      <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-full sm:w-fit overflow-x-auto">
         {['infos', 'services', 'personnel', 'avis'].map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-md text-sm font-medium ${tab === t ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
+          <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap ${tab === t ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
             {t === 'infos' ? 'Informations' : t === 'services' ? `Services (${services.length})` : t === 'personnel' ? `Personnel (${personnel.length})` : `Avis (${avis.length})`}
           </button>
         ))}

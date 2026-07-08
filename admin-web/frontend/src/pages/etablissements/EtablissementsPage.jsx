@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/ui/DataTable';
+import MobileCardList from '../../components/ui/MobileCardList';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { Building2, Filter, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
@@ -76,10 +77,10 @@ export default function EtablissementsPage() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <h2 className="text-2xl font-bold text-slate-800 mb-2">Etablissements</h2>
       <p className="text-slate-500 mb-6">{total} etablissement(s) au total</p>
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
         <select value={filters.statut} onChange={(e) => setFilters({ ...filters, statut: e.target.value })}
           className="px-4 py-2 border border-slate-300 rounded-lg text-sm outline-none">
           <option value="">Tous les statuts</option>
@@ -96,13 +97,21 @@ export default function EtablissementsPage() {
         </select>
         <input type="text" placeholder="Ville..." value={filters.ville} onChange={(e) => setFilters({ ...filters, ville: e.target.value })}
           className="px-4 py-2 border border-slate-300 rounded-lg text-sm outline-none" />
-        <button onClick={loadData} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2">
+        <button onClick={loadData} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center justify-center gap-2">
           <Filter size={16} /> Filtrer
         </button>
       </div>
-      {loading ? <p className="text-center text-slate-400 py-12">Chargement...</p> :
-        <DataTable columns={columns} data={etablissements} onRowClick={(row) => navigate(`/etablissements/${row._id}`)} />
-      }
+      {loading ? <p className="text-center text-slate-400 py-12">Chargement...</p> : (
+        <>
+          <div className="hidden lg:block">
+            <DataTable columns={columns} data={etablissements} onRowClick={(row) => navigate(`/etablissements/${row._id}`)} />
+          </div>
+          <div className="lg:hidden">
+            <MobileCardList columns={columns} data={etablissements} primaryKey="nom"
+              onRowClick={(row) => navigate(`/etablissements/${row._id}`)} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
